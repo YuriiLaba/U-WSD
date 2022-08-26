@@ -1,6 +1,7 @@
 import pandas as pd
 
 MIN_LEMMA_LENTH = 3
+MAX_GLOSS_OCCURRENCE = 1
 
 
 def read_and_transform_data(path):
@@ -19,7 +20,7 @@ def read_and_transform_data(path):
     data['gloss'] = data['gloss'].apply(lambda x: x[0])
     data['examples'] = data['examples'].apply(lambda x: x[0]['ex_text'])
 
-    gloss_to_remove = data.groupby("gloss").filter(lambda x: len(x) > 1)["gloss"].tolist()
+    gloss_to_remove = data.groupby("gloss").filter(lambda x: len(x) > MAX_GLOSS_OCCURRENCE)["gloss"].tolist()
     data = data[~data["gloss"].isin(gloss_to_remove)]
 
     data = data.groupby("lemma").filter(lambda x: len(x) > 1)
