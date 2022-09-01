@@ -1,6 +1,7 @@
 import pandas as pd
 from sklearn.metrics import accuracy_score
 import pymorphy2
+from src.utils_data import filter_gloss_frequency
 
 MINIMUM_POS_OCCURRENCE = 100
 MINIMUM_GLOSS_OCCURRENCE = 300
@@ -38,15 +39,19 @@ def generate_results_by_pos(data_with_predictions):
         if pos[1] < MINIMUM_POS_OCCURRENCE:
             break
         data_with_predictions_pos = data_with_predictions[data_with_predictions["pos"] == pos[0]]
-        results[pos[0]+'_accuracy'] = [prediction_accuracy(data_with_predictions_pos), len(data_with_predictions_pos)]
+        results[pos[0] + '_accuracy'] = [prediction_accuracy(data_with_predictions_pos), len(data_with_predictions_pos)]
     results_df = pd.DataFrame.from_dict(results,
                                         orient='index',
                                         columns=['accuracy', 'count'])
     return results_df
 
 
+def gef_number_of_gloss_for_lemma(data):
+    return data.groupby('lemma').gloss.count()
+
+
 def generate_results_by_gloss(data_with_predictions):
-    gloss_count = data_with_predictions.groupby('lemma').gloss.count().to_dict()
+    gloss_count = gef_number_of_gloss_for_lemma(data_with_predictions).to_dict()
     data_with_predictions['gloss_count'] = data_with_predictions['lemma'].map(gloss_count)
 
     results = {'overall_accuracy': [prediction_accuracy(data_with_predictions), len(data_with_predictions)]}
@@ -58,8 +63,22 @@ def generate_results_by_gloss(data_with_predictions):
                                                                       len(data_with_predictions_gloss)]
             break
         data_with_predictions_gloss = data_with_predictions[data_with_predictions["gloss_count"] == gloss_count[0]]
-        results[str(gloss_count[0])+'_gloss_word_accuracy'] = [prediction_accuracy(data_with_predictions_gloss),
-                                                               len(data_with_predictions_gloss)]
+        results[str(gloss_count[0]) + '_gloss_word_accuracy'] = [prediction_accuracy(data_with_predictions_gloss),
+                                                                 len(data_with_predictions_gloss)]
+    results_df = pd.DataFrame.from_dict(results,
+                                        orient='index',
+                                        columns=['accuracy', 'count'])
+    return results_df
+
+
+def generate_results_filter_gloss_frequency(data_with_predictions):
+    results = {'overall_accuracy': [prediction_accuracy(data_with_predictions), len(data_with_predictions)]}
+
+    max_gloss_for_lemma = gef_number_of_gloss_for_lemma(data_with_predictions).max()
+    for i in range(1, max_gloss_for_lemma):
+        data_with_predictions_filtered_gloss = filter_gloss_frequency(data_with_predictions, i)
+        results[f'take first {i} gloss'] = [prediction_accuracy(data_with_predictions_filtered_gloss),
+                                            len(data_with_predictions_filtered_gloss)]
     results_df = pd.DataFrame.from_dict(results,
                                         orient='index',
                                         columns=['accuracy', 'count'])
@@ -67,5 +86,9 @@ def generate_results_by_gloss(data_with_predictions):
 
 
 def results_reports(data_with_predictions):
-    print(generate_results_by_pos(data_with_predictions))
-    print(generate_results_by_gloss(data_with_predictions))
+    print('Accuracy by part of lang')
+    print(generate_results_by_pos(data_with_predictions), '\n')
+    print('Accuracy by number of gloss for word')
+    print(generate_results_by_gloss(data_with_predictions), '\n')
+    print('Accuracy by taking first n gloss')
+    print(generate_results_filter_gloss_frequency(data_with_predictions), '\n')

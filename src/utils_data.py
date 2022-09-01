@@ -4,6 +4,11 @@ MIN_LEMMA_LENTH = 3
 MAX_GLOSS_OCCURRENCE = 1
 
 
+def filter_gloss_frequency(data, max_gloss_frequency):
+    data = data.groupby('lemma').head(max_gloss_frequency)
+    return data
+
+
 def read_and_transform_data(path):
     data = pd.read_json(path, lines=True)
 
