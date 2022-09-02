@@ -1,7 +1,7 @@
 import pandas as pd
+import numpy as np
 from sklearn.metrics import accuracy_score
-import pymorphy2
-from src.utils_data import filter_gloss_frequency
+from src.utils_data import filter_gloss_frequency, add_pos_tag, add_frequency_column
 
 MINIMUM_POS_OCCURRENCE = 100
 MINIMUM_GLOSS_OCCURRENCE = 300
@@ -19,19 +19,9 @@ def prediction_error(data_with_predictions):
     wrong_prediction[['lemma', 'gloss', 'predicted_context']].to_csv('badly_predicted.csv', index=False)
 
 
-def add_pos_tag(data_with_predictions):
-    morph = pymorphy2.MorphAnalyzer(lang='uk')
-
-    def get_pos_tag(row):
-        p = morph.parse(row["lemma"])[0]
-        return p.tag.POS
-
-    data_with_predictions["pos"] = data_with_predictions.apply(get_pos_tag, axis=1)
-    return data_with_predictions
-
-
 def generate_results_by_pos(data_with_predictions):
-    data_with_predictions = add_pos_tag(data_with_predictions)
+    if 'pos' not in data_with_predictions.columns:
+        data_with_predictions = add_pos_tag(data_with_predictions)
 
     results = {'overall_accuracy': [prediction_accuracy(data_with_predictions), len(data_with_predictions)]}
 
@@ -85,10 +75,31 @@ def generate_results_filter_gloss_frequency(data_with_predictions):
     return results_df
 
 
+def generate_results_filter_lemma_frequency(data_with_predictions):
+    results = {'overall_accuracy': [prediction_accuracy(data_with_predictions), len(data_with_predictions)]}
+
+    if 'freq_in_corpus' not in data_with_predictions.columns:
+        data_with_predictions = add_frequency_column(data_with_predictions)
+
+    quantiles = [round(i * 0.1, 1) for i in range(1, 10)]
+    quantile_points = np.quantile(data_with_predictions['freq_in_corpus'], quantiles)
+
+    for quantile, quantile_point in zip(quantiles, quantile_points):
+        data_with_predictions_filtered_lemma_freq = data_with_predictions[data_with_predictions['freq_in_corpus'] > quantile_point]
+        results[f'remove lower {quantile * 100}% freq'] = [prediction_accuracy(data_with_predictions_filtered_lemma_freq),
+                                                           len(data_with_predictions_filtered_lemma_freq)]
+    results_df = pd.DataFrame.from_dict(results,
+                                        orient='index',
+                                        columns=['accuracy', 'count'])
+    return results_df
+
+
 def results_reports(data_with_predictions):
     print('Accuracy by part of lang')
     print(generate_results_by_pos(data_with_predictions), '\n')
     print('Accuracy by number of gloss for word')
     print(generate_results_by_gloss(data_with_predictions), '\n')
+    print('Accuracy by lemma frequency')
+    print(generate_results_filter_lemma_frequency(data_with_predictions), '\n')
     print('Accuracy by taking first n gloss')
     print(generate_results_filter_gloss_frequency(data_with_predictions), '\n')
