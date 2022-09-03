@@ -95,21 +95,12 @@ class WordSenseDetector:
     def get_last_hidden_state(self, hidden_states):
         return hidden_states[:, -1]
 
-    def mean_pooling(self, model_output, attention_mask):
-        last_hidden_state = model_output[0] # last hidden state
-        input_mask_expanded = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
-        return (torch.sum(last_hidden_state * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)).cpu().detach().numpy()
+    def mean_pooling(self, hidden_states):
+        last_hidden_state = self.get_last_hidden_state(hidden_states)
+        return torch.mean(last_hidden_state, dim=0).cpu().detach().numpy()
 
-    def get_embedding_of_the_target_word(self, hidden_states, target_word_idexes):
-        final_embedding = []
-
-        last_hidden_state = self.get_last_hidden_state(hidden_states).cpu().detach().numpy()
-
-        for idx, embedding in enumerate(last_hidden_state):
-            if idx in target_word_idexes:
-                final_embedding.append(embedding)
-
-        return np.asarray(final_embedding).mean(axis=0)
+    def get_embedding_of_the_target_word(self, hidden_states, target_word_indexes):
+        return self.mean_pooling(hidden_states[target_word_indexes[0]:target_word_indexes[-1]+1])
 
     def predict_word_sense(self, row):
         ACUTE = chr(0x301)
@@ -120,7 +111,6 @@ class WordSenseDetector:
 
         lemma_fixed = lemma.replace(GRAVE, "").replace(ACUTE, "")
 
-
         word = self.find_target_word_in_sentence(example, lemma_fixed)
         if word == None:
             # print("Can't find target word in sentence")
@@ -128,7 +118,6 @@ class WordSenseDetector:
 
         tokenized_input_text = self.tokenize_text(example)
         word_in_tokens = self.find_target_word_in_tokenized_text(tokenized_input_text, word)
-
 
         if len(word_in_tokens) == 0:
             # print("Cant find target word in tokens")
@@ -156,8 +145,9 @@ class WordSenseDetector:
                 tokenized_input_text_context = self.tokenize_text(context)
 
                 model_output_context = self.run_inference(tokenized_input_text_context)
+                hidden_states_context = self.get_hidden_states(model_output_context)
 
-                context_embedding = self.mean_pooling(model_output_context, tokenized_input_text_context['attention_mask'])
+                context_embedding = self.mean_pooling(hidden_states_context)
 
                 similarity = 1 - distance.cosine(word_embedding, context_embedding)
                 if similarity > max_sim:

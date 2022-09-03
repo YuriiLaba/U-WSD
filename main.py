@@ -5,7 +5,7 @@ from src.word_sense_detector import WordSenseDetector
 from src.udpipe_model import UDPipeModel
 
 # udpipe_model = UDPipeModel("drive/MyDrive/Colab Notebooks/ukr_nlp/20180506.uk.mova-institute.udpipe")
-# word_sense_detector = WordSenseDetector("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", udpipe_model, evaluation_dataset_pd)
+# word_sense_detector = WordSenseDetector("sentence-transformers/sentence-transformers/paraphrase-multilingual-mpnet-base-v2", udpipe_model, evaluation_dataset_pd)
 # evaluation_dataset_pd = word_sense_detector.run()
 
 # data = read_and_transform_data('data/sum_12_full_try6.jsonlines')
