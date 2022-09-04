@@ -13,8 +13,6 @@ from src.udpipe_model import UDPipeModel
 # predicted_data = prediction_function(data)
 # predicted_data = pd.read_csv('data/dummy_prediction.csv')
 
-# TODO add checking if freq_dictionary exist and run only if not exist
 # prepare_frequent_dictionary('data/ubertext.fiction_news_wikipedia.filter_rus+short.csv.xz')
 
 # results_reports(predicted_data)
-

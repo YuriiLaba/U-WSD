@@ -1,6 +1,7 @@
 import lzma
 import pandas as pd
 import pymorphy2
+import os
 
 MIN_LEMMA_LENTH = 3
 MAX_GLOSS_OCCURRENCE = 1
@@ -36,7 +37,11 @@ def read_and_transform_data(path):
     return data
 
 
-def prepare_frequent_dictionary(path, save_errors=True):
+def prepare_frequent_dictionary(path, force_rebuild=False, save_errors=False):
+    if os.path.exists('data/frequents.pkl') and not force_rebuild:
+        print('Frequency df already exist, use force_rebuild=True to rebuild it')
+        return
+
     lines_of_file = []
 
     # TODO think how to correct parse dictionary to avoid errors
@@ -59,11 +64,17 @@ def prepare_frequent_dictionary(path, save_errors=True):
         df[numeric_col] = df[numeric_col].astype('float')
 
     df = df.groupby(['lemma', 'pos']).sum().reset_index()
+
+    if not os.path.exists('data'):
+        os.mkdir('data')
+
     df.to_pickle('data/frequents.pkl')
 
     if save_errors:
         df = pd.DataFrame(errors_lines, columns=["column"])
         df.to_csv('data/errors_of_dict.csv', index=False)
+
+    del df
 
 
 def add_pos_tag(data_with_predictions):
