@@ -22,7 +22,7 @@ def read_and_transform_data(path):
     data = data.explode('synsets')
     data.dropna(subset=['synsets'], inplace=True)
 
-    data = data[data['synsets'].apply(lambda x: len(x['gloss'])) == 1]
+    data = data[data['synsets'].apply(lambda x: len(x['gloss'])) > 0]
     data = data[data['synsets'].apply(lambda x: len(x['examples'])) > 0]
 
     data = pd.concat([data.lemma, data.synsets.apply(pd.Series)], axis=1)
