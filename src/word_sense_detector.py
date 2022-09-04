@@ -99,6 +99,19 @@ class WordSenseDetector:
         last_hidden_state = self.get_last_hidden_state(hidden_states)
         return torch.mean(last_hidden_state, dim=0).cpu().detach().numpy()
 
+    def max_pooling(self, hidden_states):
+        last_hidden_state = self.get_last_hidden_state(hidden_states)
+        return torch.max(last_hidden_state, dim=0).values.cpu().detach().numpy()
+
+    def mean_max_pooling(self, hidden_states):
+
+        last_hidden_state = self.get_last_hidden_state(hidden_states)
+
+        mean_pooling_embeddings = torch.mean(last_hidden_state, dim=0)
+        max_pooling_embeddings = torch.max(last_hidden_state, dim=0).values
+
+        return torch.cat((mean_pooling_embeddings, max_pooling_embeddings), dim=0).cpu().detach().numpy() # TODO: check about dim 0
+
     def get_embedding_of_the_target_word(self, hidden_states, target_word_indexes):
         return self.mean_pooling(hidden_states[target_word_indexes[0]:target_word_indexes[-1]+1])
 
