@@ -2,3 +2,4 @@
 /data
 *.ipynb
 .DS_Store
+*/__pycache__

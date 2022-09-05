@@ -68,6 +68,7 @@ def prepare_frequent_dictionary(path, force_rebuild=False, save_errors=False):
     if not os.path.exists('data'):
         os.mkdir('data')
 
+    df.sort_values(['lemma', 'freq_in_corpus'], inplace=True)
     df.to_pickle('data/frequents.pkl')
 
     if save_errors:
@@ -90,6 +91,7 @@ def add_pos_tag(data_with_predictions):
 
 def add_frequency_column(data):
     dictionary = pd.read_pickle('data/frequents.pkl')
+
     if 'pos' not in data.columns:
         data = add_pos_tag(data)
 
@@ -97,9 +99,17 @@ def add_frequency_column(data):
 
     # TODO think about better way to merge freq_dict with dataset (because we define pos only by 1 word)
     data = data.merge(dictionary, how='left', left_on=['clear_lemma', 'pos'], right_on=['lemma', 'pos'], suffixes=('', '_y'))
-    data.drop(columns=['clear_lemma', 'lemma_y', 'count', 'doc_count'], inplace=True)
 
-    # TODO check why so much rows have freq_in_corpus = 0
+    data_not_merged = data[data.freq_in_corpus.isna()][data.columns[:7]].copy()
+    data = data[data.freq_in_corpus.notna()]
+
+    dictionary.drop_duplicates(subset=['lemma'], keep='last', inplace=True)
+    data_not_merged = data_not_merged.merge(dictionary, how='left', left_on=['clear_lemma'], right_on=['lemma'], suffixes=('', '_y'))
+
+    data = pd.concat([data, data_not_merged])
+    data.drop(columns=['clear_lemma', 'lemma_y', 'count', 'doc_count', 'pos_y'], inplace=True)
+
     data[['freq_by_pos', 'freq_in_corpus', 'doc_frequency']] = data[['freq_by_pos', 'freq_in_corpus', 'doc_frequency']].fillna(0)
 
+    del dictionary, data_not_merged
     return data

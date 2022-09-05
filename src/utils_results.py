@@ -14,9 +14,9 @@ def prediction_accuracy(data_with_predictions):
 
 
 def prediction_error(data_with_predictions):
-    wrong_prediction = data_with_predictions[
-        data_with_predictions['gloss'] != data_with_predictions['predicted_context']]
-    wrong_prediction[['lemma', 'gloss', 'predicted_context']].to_csv('badly_predicted.csv', index=False)
+    wrong_prediction = data_with_predictions[data_with_predictions['gloss'] != data_with_predictions['predicted_context']]
+    wrong_prediction.drop(columns=['clear_lemma'], errors='ignore')
+    wrong_prediction.to_csv('badly_predicted.csv', index=False)
 
 
 def generate_results_by_pos(data_with_predictions):
@@ -40,7 +40,7 @@ def gef_number_of_gloss_for_lemma(data):
     return data.groupby('lemma').gloss.count()
 
 
-def generate_results_by_gloss(data_with_predictions):
+def generate_results_by_count_of_gloss(data_with_predictions):
     gloss_count = gef_number_of_gloss_for_lemma(data_with_predictions).to_dict()
     data_with_predictions['gloss_count'] = data_with_predictions['lemma'].map(gloss_count)
 
@@ -49,12 +49,12 @@ def generate_results_by_gloss(data_with_predictions):
     for gloss_count in data_with_predictions["gloss_count"].value_counts().sort_index().iteritems():
         if gloss_count[1] < MINIMUM_GLOSS_OCCURRENCE:
             data_with_predictions_gloss = data_with_predictions[data_with_predictions["gloss_count"] >= gloss_count[0]]
-            results[str(gloss_count[0]) + '+_gloss_word_accuracy'] = [prediction_accuracy(data_with_predictions_gloss),
-                                                                      len(data_with_predictions_gloss)]
+            results[f'word_that_have_{gloss_count[0]}_glosses'] = [prediction_accuracy(data_with_predictions_gloss),
+                                                                   len(data_with_predictions_gloss)]
             break
         data_with_predictions_gloss = data_with_predictions[data_with_predictions["gloss_count"] == gloss_count[0]]
-        results[str(gloss_count[0]) + '_gloss_word_accuracy'] = [prediction_accuracy(data_with_predictions_gloss),
-                                                                 len(data_with_predictions_gloss)]
+        results[f'word_that_have_{gloss_count[0]}_glosses'] = [prediction_accuracy(data_with_predictions_gloss),
+                                                               len(data_with_predictions_gloss)]
     results_df = pd.DataFrame.from_dict(results,
                                         orient='index',
                                         columns=['accuracy', 'count'])
@@ -98,8 +98,9 @@ def results_reports(data_with_predictions):
     print('Accuracy by part of lang')
     print(generate_results_by_pos(data_with_predictions), '\n')
     print('Accuracy by number of gloss for word')
-    print(generate_results_by_gloss(data_with_predictions), '\n')
+    print(generate_results_by_count_of_gloss(data_with_predictions), '\n')
     print('Accuracy by lemma frequency')
     print(generate_results_filter_lemma_frequency(data_with_predictions), '\n')
     print('Accuracy by taking first n gloss')
     print(generate_results_filter_gloss_frequency(data_with_predictions), '\n')
+    prediction_error(data_with_predictions)
