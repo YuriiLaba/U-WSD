@@ -1,6 +1,7 @@
 import lzma
 import pandas as pd
 import pymorphy2
+import os
 
 MIN_LEMMA_LENTH = 3
 MAX_GLOSS_OCCURRENCE = 1
@@ -21,7 +22,7 @@ def read_and_transform_data(path):
     data = data.explode('synsets')
     data.dropna(subset=['synsets'], inplace=True)
 
-    data = data[data['synsets'].apply(lambda x: len(x['gloss'])) == 1]
+    data = data[data['synsets'].apply(lambda x: len(x['gloss'])) > 0]
     data = data[data['synsets'].apply(lambda x: len(x['examples'])) > 0]
 
     data = pd.concat([data.lemma, data.synsets.apply(pd.Series)], axis=1)
@@ -36,7 +37,11 @@ def read_and_transform_data(path):
     return data
 
 
-def prepare_frequent_dictionary(path, save_errors=True):
+def prepare_frequent_dictionary(path, force_rebuild=False, save_errors=False):
+    if os.path.exists('data/frequents.pkl') and not force_rebuild:
+        print('Frequency df already exist, use force_rebuild=True to rebuild it')
+        return
+
     lines_of_file = []
 
     # TODO think how to correct parse dictionary to avoid errors
@@ -59,11 +64,18 @@ def prepare_frequent_dictionary(path, save_errors=True):
         df[numeric_col] = df[numeric_col].astype('float')
 
     df = df.groupby(['lemma', 'pos']).sum().reset_index()
+
+    if not os.path.exists('data'):
+        os.mkdir('data')
+
+    df.sort_values(['lemma', 'freq_in_corpus'], inplace=True)
     df.to_pickle('data/frequents.pkl')
 
     if save_errors:
         df = pd.DataFrame(errors_lines, columns=["column"])
         df.to_csv('data/errors_of_dict.csv', index=False)
+
+    del df
 
 
 def add_pos_tag(data_with_predictions):
@@ -79,6 +91,7 @@ def add_pos_tag(data_with_predictions):
 
 def add_frequency_column(data):
     dictionary = pd.read_pickle('data/frequents.pkl')
+
     if 'pos' not in data.columns:
         data = add_pos_tag(data)
 
@@ -86,9 +99,17 @@ def add_frequency_column(data):
 
     # TODO think about better way to merge freq_dict with dataset (because we define pos only by 1 word)
     data = data.merge(dictionary, how='left', left_on=['clear_lemma', 'pos'], right_on=['lemma', 'pos'], suffixes=('', '_y'))
-    data.drop(columns=['clear_lemma', 'lemma_y', 'count', 'doc_count'], inplace=True)
 
-    # TODO check why so much rows have freq_in_corpus = 0
+    data_not_merged = data[data.freq_in_corpus.isna()][data.columns[:7]].copy()
+    data = data[data.freq_in_corpus.notna()]
+
+    dictionary.drop_duplicates(subset=['lemma'], keep='last', inplace=True)
+    data_not_merged = data_not_merged.merge(dictionary, how='left', left_on=['clear_lemma'], right_on=['lemma'], suffixes=('', '_y'))
+
+    data = pd.concat([data, data_not_merged])
+    data.drop(columns=['clear_lemma', 'lemma_y', 'count', 'doc_count', 'pos_y'], inplace=True)
+
     data[['freq_by_pos', 'freq_in_corpus', 'doc_frequency']] = data[['freq_by_pos', 'freq_in_corpus', 'doc_frequency']].fillna(0)
 
+    del dictionary, data_not_merged
     return data
