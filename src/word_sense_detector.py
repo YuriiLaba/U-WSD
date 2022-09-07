@@ -109,7 +109,7 @@ class WordSenseDetector:
         mean_pooling_embeddings = torch.mean(last_hidden_state, dim=0)
         max_pooling_embeddings = torch.max(last_hidden_state, dim=0).values
 
-        return torch.cat((mean_pooling_embeddings, max_pooling_embeddings), dim=0).cpu().detach().numpy() # TODO: check about dim 0
+        return torch.cat((mean_pooling_embeddings, max_pooling_embeddings), dim=0).cpu().detach().numpy()  # TODO: check about dim 0
 
     def concatenate_pooling(self, hidden_states):
         last_four_layers = [hidden_states[:, i] for i in (-1, -2, -3, -4)]

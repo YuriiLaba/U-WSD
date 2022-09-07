@@ -1,2 +1,4 @@
 transformers
+pymorphy2
+pymorphy2-dicts-uk[fast]
 ufal.udpipe-1.2.0.1.tar.gz
