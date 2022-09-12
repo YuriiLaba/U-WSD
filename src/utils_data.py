@@ -14,19 +14,31 @@ def filter_gloss_frequency(data, max_gloss_frequency):
     return data
 
 
-def read_and_transform_data(path):
+def read_and_transform_data(path, only_homonyms=False):
     data = pd.read_json(path, lines=True)
 
-    data = data[data.lemma.apply(len) > MIN_LEMMA_LENTH]
+    data["clear_lemma"] = data["lemma"].apply(lambda x: x.replace(GRAVE, "").replace(ACUTE, "")).str.lower()
+    print("Dataset shape: " + str(data.shape))
+
+    data = data[data["clear_lemma"].apply(len) > MIN_LEMMA_LENTH]
+
+    if only_homonyms:
+        data = data.groupby('clear_lemma').filter(lambda x: len(x) > 1)
+        print("Homonyms shape: " + str(data.shape))
 
     data = data.explode('synsets')
-
     data.dropna(subset=['synsets'], inplace=True)
 
     data = data[data['synsets'].apply(lambda x: len(x['gloss'])) > 0]
     data = data[data['synsets'].apply(lambda x: len(x['examples'])) > 0]
 
+    # data["clear_lemma"] = data["lemma"].apply(lambda x: x.replace(GRAVE, "").replace(ACUTE, "")).str.lower()
+    # data = data.groupby('clear_lemma').filter(lambda x: len(x) > 1)
+
+    data = data.groupby('clear_lemma').filter(lambda x: len(x) > 1)
+
     data = pd.concat([data.lemma, data.synsets.apply(pd.Series)], axis=1)
+
     data.drop(columns=['sense_id'], inplace=True)
     data['gloss'] = data['gloss'].apply(lambda x: x[0])
 
@@ -34,7 +46,6 @@ def read_and_transform_data(path):
     gloss_to_remove = data.groupby("gloss").filter(lambda x: len(x) > MAX_GLOSS_OCCURRENCE)["gloss"].tolist()
     data = data[~data["gloss"].isin(gloss_to_remove)]
 
-    data = data.groupby("lemma").filter(lambda x: len(x) > 1)
     return data
 
 

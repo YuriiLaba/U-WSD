@@ -8,7 +8,7 @@ from src.utils_data import read_and_transform_data, prepare_frequent_dictionary
 # word_sense_detector = WordSenseDetector("sentence-transformers/paraphrase-multilingual-mpnet-base-v2", udpipe_model, evaluation_dataset_pd)
 # evaluation_dataset_pd = word_sense_detector.run()
 
-data = read_and_transform_data('data/sum_12_full_try6.jsonlines')
+data = read_and_transform_data('data/sum_12_full_try6.jsonlines', True)
 
 # prepare_frequent_dictionary('data/ubertext.fiction_news_wikipedia.filter_rus+short.csv.xz')
 # evaluation_dataset_pd = pd.read_csv('data/dummy_prediction.csv')
