@@ -2,7 +2,7 @@ import torch
 from torch.nn import functional
 from torch.nn import Conv1d
 
-from utils_model import get_last_hidden_state
+from src.utils_model import get_last_hidden_state
 
 
 class PoolingStrategy:

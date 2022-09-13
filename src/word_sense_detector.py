@@ -6,8 +6,8 @@ from transformers import AutoTokenizer, AutoModel
 from collections import Counter
 from scipy.spatial import distance
 
-from poolings import PoolingStrategy
-from utils_model import get_hidden_states
+from src.poolings import PoolingStrategy
+from src.utils_model import get_hidden_states
 
 
 class WordSenseDetector:
