@@ -12,12 +12,15 @@ from src.utils_model import get_hidden_states
 
 class WordSenseDetector:
 
-    def __init__(self, pretrained_model, udpipe_model, evaluation_dataset):
+    def __init__(self, pretrained_model, udpipe_model, evaluation_dataset,
+                 prediction_strategy="all_examples_to_one_embedding"):
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = AutoModel.from_pretrained(pretrained_model, output_hidden_states=True).to(self.device)
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
         self.udpipe_model = udpipe_model
         self.evaluation_dataset = evaluation_dataset
+        self.prediction_strategy = prediction_strategy
         self.missing_target_word_in_sentence = 0
 
     def tokenize_text(self, input_text):
@@ -120,24 +123,57 @@ class WordSenseDetector:
     def predict_word_sense(self, row):
 
         lemma = row["lemma"]
-        example = row["example"]
-
+        examples = row["examples"]
         contexts = self.evaluation_dataset[self.evaluation_dataset["lemma"] == lemma]["gloss"].tolist()
 
-        max_sim = -1
-        correct_context = None
+        if self.prediction_strategy == "all_examples_to_one_embedding":
 
-        target_word_embedding = self.get_target_word_embedding(lemma, example)
+            # TODO: check whether it's more efficient to create numpy here
+            combined_embedding = []
 
-        for context in contexts:
-            context_embedding = self.get_context_embedding(context)
-            similarity = 1 - distance.cosine(target_word_embedding, context_embedding)
+            max_sim = -1
+            correct_context = None
 
-            if similarity > max_sim:
-                max_sim = similarity
-                correct_context = context
+            for example in examples:
+                target_word_embedding = self.get_target_word_embedding(lemma, example)
+                if target_word_embedding is None:
+                    return None
 
-        return correct_context
+                combined_embedding.append(target_word_embedding)
+
+            combined_embedding = np.asarray(combined_embedding)
+            combined_embedding = np.mean(combined_embedding, axis=0)
+
+            for context in contexts:
+                context_embedding = self.get_context_embedding(context)
+                similarity = 1 - distance.cosine(combined_embedding, context_embedding)
+
+                if similarity > max_sim:
+                    max_sim = similarity
+                    correct_context = context
+
+            return correct_context
+
+        if self.prediction_strategy == "max_sim_across_all_examples":
+
+            max_sim = -1
+            correct_context = None
+
+            for context in contexts:
+                context_embedding = self.get_context_embedding(context)
+
+                for example in examples:
+                    target_word_embedding = self.get_target_word_embedding(lemma, example)
+                    if target_word_embedding is None:
+                        return None
+
+                    similarity = 1 - distance.cosine(target_word_embedding, context_embedding)
+
+                    if similarity > max_sim:
+                        max_sim = similarity
+                        correct_context = context
+
+            return correct_context
 
     def run(self):
         self.evaluation_dataset["predicted_context"] = self.evaluation_dataset.apply(self.predict_word_sense, axis=1)
