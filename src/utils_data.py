@@ -2,9 +2,14 @@ import lzma
 import pandas as pd
 import pymorphy2
 import os
+import configparser
 
-MIN_LEMMA_LENTH = 3
-MAX_GLOSS_OCCURRENCE = 1
+config = configparser.ConfigParser()
+config.read('config.ini')
+
+MIN_LEMMA_LENTH = config.getint('PREPARATION', 'MIN_LEMMA_LENTH')
+MAX_GLOSS_OCCURRENCE = config.getint('PREPARATION', 'MAX_GLOSS_OCCURRENCE')
+
 ACUTE = chr(0x301)
 GRAVE = chr(0x300)
 
@@ -59,7 +64,7 @@ def prepare_frequent_dictionary(path, force_rebuild=False, save_errors=False):
                 lines_of_file.append(parsed_line)
 
     df = pd.DataFrame(lines_of_file[1:], columns=lines_of_file[0])
-    df.lemma = df.lemma.apply(lambda x: x.replace("’", "'")).str.lower()
+    df.lemma = df.lemma.str.replace("’", "'").str.lower()
     for numeric_col in ['count', 'doc_count', 'freq_by_pos', 'freq_in_corpus', 'doc_frequency']:
         df[numeric_col] = df[numeric_col].astype('float')
 

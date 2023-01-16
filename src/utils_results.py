@@ -2,10 +2,14 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics import accuracy_score
 from src.utils_data import take_first_n_glosses, add_pos_tag, add_frequency_column
+import configparser
 
-MINIMUM_POS_OCCURRENCE = 100
-MINIMUM_GLOSS_OCCURRENCE = 300
-FREQUENCY_QUANTILES = 10
+config = configparser.ConfigParser()
+config.read('config.ini')
+
+MINIMUM_POS_OCCURRENCE = config.getint('RESULTS', 'MINIMUM_POS_OCCURRENCE')
+MINIMUM_GLOSS_OCCURRENCE = config.getint('RESULTS', 'MINIMUM_GLOSS_OCCURRENCE')
+FREQUENCY_QUANTILES = config.getint('RESULTS', 'FREQUENCY_QUANTILES')
 
 
 def prediction_accuracy(data_with_predictions):

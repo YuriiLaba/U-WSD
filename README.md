@@ -16,6 +16,10 @@
    - Take first part of gloss for each lemma (TODO experiment with other approaches: concat, take all parts separate)
    - Remove lemmas with gloss that appears more than MAX_GLOSS_OCCURRENCE
 2. Take first n_senses glosses for each lemma
+3. Run model...
+
+...
+
 
 
 ### Validation method
