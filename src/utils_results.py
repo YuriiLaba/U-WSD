@@ -25,9 +25,9 @@ def prediction_error(data_with_predictions):
     wrong_prediction.to_csv('badly_predicted.csv', index=False)
 
 
-def generate_results_by_pos(data_with_predictions):
+def generate_results_by_pos(data_with_predictions, udpipe_model):
     if 'pos' not in data_with_predictions.columns:
-        data_with_predictions = add_pos_tag(data_with_predictions)
+        data_with_predictions = add_pos_tag(data_with_predictions, udpipe_model)
 
     results = {'overall_accuracy': [prediction_accuracy(data_with_predictions), len(data_with_predictions)]}
 
@@ -81,11 +81,11 @@ def generate_results_filter_gloss_frequency(data_with_predictions):
     return results_df
 
 
-def generate_results_filter_lemma_frequency(data_with_predictions):
+def generate_results_filter_lemma_frequency(data_with_predictions, udpipe_model):
     results = {'overall_accuracy': [prediction_accuracy(data_with_predictions), len(data_with_predictions)]}
 
     if 'freq_in_corpus' not in data_with_predictions.columns:
-        data_with_predictions = add_frequency_column(data_with_predictions)
+        data_with_predictions = add_frequency_column(data_with_predictions, udpipe_model)
 
     quantiles = [round(i * 1/FREQUENCY_QUANTILES, 1) for i in range(1, FREQUENCY_QUANTILES)]
     quantile_points = np.quantile(data_with_predictions['freq_in_corpus'], quantiles)
@@ -102,13 +102,13 @@ def generate_results_filter_lemma_frequency(data_with_predictions):
     return results_df
 
 
-def results_reports(data_with_predictions):
+def results_reports(data_with_predictions, udpipe_model):
     print('Accuracy by part of lang')
-    print(generate_results_by_pos(data_with_predictions), '\n')
+    print(generate_results_by_pos(data_with_predictions, udpipe_model), '\n')
     print('Accuracy by number of gloss for word')
     print(generate_results_by_count_of_gloss(data_with_predictions), '\n')
     print('Accuracy by lemma frequency')
-    print(generate_results_filter_lemma_frequency(data_with_predictions), '\n')
+    print(generate_results_filter_lemma_frequency(data_with_predictions, udpipe_model), '\n')
     print('Accuracy by taking first n gloss')
     print(generate_results_filter_gloss_frequency(data_with_predictions), '\n')
     prediction_error(data_with_predictions)

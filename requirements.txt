@@ -1,5 +1,10 @@
-torch
-transformers
-pymorphy2
+torch~=1.11.0
+transformers~=4.22.0
+pymorphy2~=0.9.1
 pymorphy2-dicts-uk[fast]
 ufal.udpipe-1.2.0.1.tar.gz
+stanza == 1.4.2
+pandas~=1.4.4
+numpy~=1.21.4
+scikit-learn~=0.24.0
+scipy~=1.5.4

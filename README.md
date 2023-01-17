@@ -10,11 +10,16 @@
    - Get freq_in_corpus for each pair lemma + pos
 1. Read and transform data
    - Remove lemmas shorter than MIN_LEMMA_LENTH
-   - Remove lemmas with missing synsets (АНТО́НІВ, БОРТНЯ́К т.п.)
-   - Remove lemmas with missing gloss (ГИ́ДКО, ЛЯ́ШКА)
-   - Remove lemmas with missing examples (ПЕРЕХОРУВА́ТИ, ОБЕЗКРО́ВИТИСЯ)
-   - Take first part of gloss for each lemma (TODO experiment with other approaches: concat, take all parts separate)
+   - Remove lemmas where synset emtpy (БА́ЙДИКИ, ВСТУПИ́ТИ т.п.) or missing (АНТО́НІВ, БОРТНЯ́К т.п.)
+   - Check if we use Homonyms (homonym=True) or pay attention on Stress (homonym=False)
+     - If use homonyms than combine different lemmas that have same spelling.
+   - Remove lemmas with missing gloss (ГИ́ДКО, ЛЯ́ШКА т.п.)
+   - Remove lemmas with missing examples (ПЕРЕХОРУВА́ТИ, ОБЕЗКРО́ВИТИСЯ т.п.)
+   - Prepare gloss for lemmas, there are two different gloss_strategy:
+     - Take first gloss for each lemma
+     - Concat all gloss to one
    - Remove lemmas with gloss that appears more than MAX_GLOSS_OCCURRENCE
+   - Remove from gloss (у 1 знач.)
 2. Take first n_senses glosses for each lemma
 3. Run model...
 
@@ -24,7 +29,9 @@
 
 ### Validation method
 - Results by lemma POS
-  - Get POS of lemma with pymorphy2
+  - Get POS of lemma. There are 2 different ways to do that:
+    - With pymorphy for lemma
+    - With Udpipe and Stanza base on example column
   - Remove low occurrence POS (occurrence in data set less than MINIMUM_POS_OCCURRENCE)
 - Results by number of different gloss per lemma
   - Get result by number of different gloss for lemma.

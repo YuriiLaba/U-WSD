@@ -2,6 +2,8 @@ import lzma
 import pandas as pd
 import pymorphy2
 import os
+import re
+import stanza
 import configparser
 
 config = configparser.ConfigParser()
@@ -19,26 +21,39 @@ def take_first_n_glosses(data, first_n_glosses):
     return data
 
 
-def read_and_transform_data(path):
+def read_and_transform_data(path, homonym=False, gloss_strategy='first'):
     data = pd.read_json(path, lines=True).drop(columns=['suffixes', 'tags', 'phrases', 'word_id', 'url'])
     data = data[data.lemma.apply(len) > MIN_LEMMA_LENTH]
 
-    data = data.explode('synsets')
-
     data.dropna(subset=['synsets'], inplace=True)
+    data = data[data.synsets.apply(len) > 0]
+
+    if homonym:
+        data['lemma'] = data.lemma.apply(lambda x: x.lower().replace(GRAVE, "").replace(ACUTE, ""))
+        data = data.groupby("lemma").filter(lambda x: len(x) > 1)
+        data['synsets'] = data['synsets'].apply(lambda x: x[0])
+    else:
+        data = data.explode('synsets')
+
     data = data[data['synsets'].apply(lambda x: len(x['gloss'])) > 0]
     data = data[data['synsets'].apply(lambda x: len(x['examples'])) > 0]
 
     data = pd.concat([data.lemma, data.synsets.apply(pd.Series)], axis=1)
     data.drop(columns=['sense_id'], inplace=True)
-    # TODO try concat gloss not only take 0
-    data['gloss'] = data['gloss'].apply(lambda x: x[0])
+
+    if gloss_strategy == 'first':
+        data['gloss'] = data['gloss'].apply(lambda x: x[0])
+    elif gloss_strategy == 'concat':
+        data['gloss'] = data['gloss'].apply(lambda x: '. '.join(x))
 
     data['examples'] = data['examples'].apply(lambda x: [i["ex_text"] for i in x])
     gloss_to_remove = data.groupby("gloss").filter(lambda x: len(x) > MAX_GLOSS_OCCURRENCE)["gloss"].tolist()
     data = data[~data["gloss"].isin(gloss_to_remove)]
 
     data = data.groupby("lemma").filter(lambda x: len(x) > 1)
+
+    pattern = r' \([^\(]*?знач[^\)]*?\)'
+    data.gloss = data.gloss.apply(lambda x: re.sub(pattern, '', x))
     return data
 
 
@@ -48,10 +63,9 @@ def prepare_frequent_dictionary(path, force_rebuild=False, save_errors=False):
         return
 
     lines_of_file = []
+    errors_lines = []
 
     # TODO think how to correct parse dictionary to avoid errors
-    if save_errors:
-        errors_lines = []
 
     with open(path, 'rb') as compressed:
         with lzma.LZMAFile(compressed) as uncompressed:
@@ -83,36 +97,69 @@ def prepare_frequent_dictionary(path, force_rebuild=False, save_errors=False):
     del df
 
 
-def add_pos_tag(data_with_predictions):
-    morph = pymorphy2.MorphAnalyzer(lang='uk')
+def add_pos_tag(data_with_predictions, udpipe_model=None, engine="stanza"):
+    if engine == 'stanza':
+        if os.path.exists('data/pos_precalculation.pkl'):
+            pos_precalculation = pd.read_pickle('data/pos_precalculation.pkl')
+            data_with_predictions.loc[:, "pos"] = data_with_predictions.lemma.replace(pos_precalculation['pos'])
+        else:
+            nlp = stanza.Pipeline(lang='uk', processors='tokenize,mwt,pos', verbose=False)
+            
+            def get_pos_tag_udpipe(word, text):
+                word = word.lower().replace(GRAVE, "").replace(ACUTE, "").replace("'", "’")
+                tokens = udpipe_model.tokenize(text)
+                for tok_sent in tokens:
+                    udpipe_model.tag(tok_sent)
+                    for word_index, w in enumerate(tok_sent.words[1:]):
+                        if w.lemma == word:
+                            return w.upostag
+                doc = nlp(word)
+                return doc.sentences[0].words[0].upos
 
-    def get_pos_tag(row):
-        p = morph.parse(row["lemma"])[0]
-        return p.tag.POS
+            data_with_predictions["pos"] = data_with_predictions.apply(lambda x: get_pos_tag_udpipe(x['lemma'],
+                                                                                                    x['examples'][0]),
+                                                                       axis=1)
+            data_with_predictions[['lemma', 'pos']].set_index('lemma').to_pickle('data/pos_precalculation.pkl')
+    elif engine == 'pymorphy':
+        morph = pymorphy2.MorphAnalyzer(lang='uk')
 
-    data_with_predictions["pos"] = data_with_predictions.apply(get_pos_tag, axis=1)
+        def get_pos_tag(row):
+            p = morph.parse(row["lemma"])[0]
+            return p.tag.POS
+
+        data_with_predictions["pos"] = data_with_predictions.apply(get_pos_tag, axis=1)
+
     return data_with_predictions
 
 
-def add_frequency_column(data):
+def add_frequency_column(data, udpipe_model):
     dictionary = pd.read_pickle('data/frequents.pkl')
 
     if 'pos' not in data.columns:
-        data = add_pos_tag(data)
+        data = add_pos_tag(data, udpipe_model)
 
-    data['clear_lemma'] = data.lemma.apply(lambda x: x.replace(GRAVE, "").replace(ACUTE, "")).str.lower()
+    data['clear_lemma'] = data.lemma.str.replace(GRAVE, "").str.replace(ACUTE, "").str.lower()
+    important_columns = data.columns
 
-    # TODO think about better way to merge freq_dict with dataset (because we define pos only by 1 word)
-    data = data.merge(dictionary, how='left', left_on=['clear_lemma', 'pos'], right_on=['lemma', 'pos'], suffixes=('', '_y'))
+    data = data.merge(dictionary,
+                      how='left',
+                      left_on=['clear_lemma', 'pos'],
+                      right_on=['lemma', 'pos'],
+                      suffixes=('', '_y'))
 
-    data_not_merged = data[data.freq_in_corpus.isna()][data.columns[:7]].copy()
+    data_not_merged = data[data.freq_in_corpus.isna()][important_columns].copy()
     data = data[data.freq_in_corpus.notna()]
 
     dictionary.drop_duplicates(subset=['lemma'], keep='last', inplace=True)
-    data_not_merged = data_not_merged.merge(dictionary, how='left', left_on=['clear_lemma'], right_on=['lemma'], suffixes=('', '_y'))
+    data_not_merged = data_not_merged.merge(dictionary.drop(columns=['pos']),
+                                            how='left',
+                                            left_on=['clear_lemma'],
+                                            right_on=['lemma'],
+                                            suffixes=('', '_y')
+                                            )
 
     data = pd.concat([data, data_not_merged])
-    data.drop(columns=['clear_lemma', 'lemma_y', 'count', 'doc_count', 'pos_y'], inplace=True)
+    data.drop(columns=['clear_lemma', 'lemma_y', 'count', 'doc_count', 'pos_y'], inplace=True, errors='ignore')
 
     data[['freq_by_pos', 'freq_in_corpus', 'doc_frequency']] = data[['freq_by_pos', 'freq_in_corpus', 'doc_frequency']].fillna(0)
 
