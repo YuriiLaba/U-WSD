@@ -5,7 +5,7 @@ import os
 import configparser
 
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read('src/config.ini')
 
 MIN_LEMMA_LENTH = config.getint('PREPARATION', 'MIN_LEMMA_LENTH')
 MAX_GLOSS_OCCURRENCE = config.getint('PREPARATION', 'MAX_GLOSS_OCCURRENCE')
