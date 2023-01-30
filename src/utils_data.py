@@ -21,6 +21,35 @@ def take_first_n_glosses(data, first_n_glosses):
     return data
 
 
+def clean_badly_parsed_data(data):
+    patterns_to_clear = ["(?i)Те саме[ ,]+[0-9. ,що;–)]+",
+                         "(?i)дія за знач[0-9. ,і;–)]+",
+                         "(?i)стан за знач[0-9. ,і;–)]+",
+                         "(?i)Прикм. до[0-9. ,і;–)]+",
+                         "(?i)Зменш. до[0-9. ,і;–)]+",
+                         "(?i)Вищ. ст. до[0-9. ,і;–)]+",
+                         "(?i)Док. до[0-9. ,і;–)]+",
+                         "(?i)Присл. до[0-9. ,і;–)]+",
+                         " . . [0-9 ,\)–]+"
+                         ]
+    for pattern in patterns_to_clear:
+        data.gloss = data.gloss.apply(lambda x: re.sub(pattern, '', x))
+    data = data[data['gloss'].apply(len) > 2]
+    data = data.groupby("lemma").filter(lambda x: len(x) > 1)
+
+    replace_short = {"Вигот.": "Виготовлений",
+                     "Стос.": "Стосується",
+                     "Власт.": "Властивий",
+                     "Признач.": "Призначений",
+                     "Зробл.": "Зроблений",
+                     "і т. ін.": ""}
+
+    for r in replace_short:
+        data.gloss = data.gloss.str.replace(r, replace_short[r])
+
+    return data
+
+
 def read_and_transform_data(path, homonym=False, gloss_strategy='first'):
     data = pd.read_json(path, lines=True).drop(columns=['suffixes', 'tags', 'phrases', 'word_id', 'url'])
     data = data[data.lemma.apply(len) > MIN_LEMMA_LENTH]

@@ -14,14 +14,16 @@ class WordSenseDetector:
 
     def __init__(self, pretrained_model, udpipe_model, evaluation_dataset,
                  prediction_strategy="all_examples_to_one_embedding"):
-
+        # TODO create doc-string especially for describing prediction_strategy
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = AutoModel.from_pretrained(pretrained_model, output_hidden_states=True).to(self.device)
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
         self.udpipe_model = udpipe_model
         self.evaluation_dataset = evaluation_dataset
         self.prediction_strategy = prediction_strategy
+        # TODO create a WSD_logger and move there missing_target_word_in_sentence
         self.missing_target_word_in_sentence = 0
+        # TODO create a polling selection
 
     def tokenize_text(self, input_text):
         return self.tokenizer(input_text, return_tensors='pt').to(self.device)
@@ -31,6 +33,7 @@ class WordSenseDetector:
         TODO: This function wil only find one target word
         """
 
+        # TODO fix misunderstandin issue with similarity of tokenize and tokenize_text
         tokenized = self.udpipe_model.tokenize(input_text)
 
         for tok_sent in tokenized:
@@ -41,15 +44,17 @@ class WordSenseDetector:
                 # print(w.lemma)
 
                 if w.lemma.lower() == target_word.lower():
+                    # TODO check if this better return tok_sent.words[word_index+1].form
                     return [w.form for w in tok_sent.words[1:]][word_index]
 
         self.missing_target_word_in_sentence += 1
         return None
 
     def find_target_word_in_tokenized_text(self, tokenized_input_text, word):
+        # TODO check if better list(set(tokenized_input_text.word_ids()))
         unique_w_ids = list(Counter(tokenized_input_text.word_ids()).keys())
         unique_w_ids.remove(None)
-        tokens = ["" for i in range(len(unique_w_ids))]
+        tokens = ["" for _ in range(len(unique_w_ids))]
 
         word_indexes = []
         prev_word_id = None
@@ -98,6 +103,7 @@ class WordSenseDetector:
         GRAVE = chr(0x300)
         target_word_fixed = target_word.replace(GRAVE, "").replace(ACUTE, "")
 
+        # TODO rename "word" for better understanding
         word = self.find_target_word_in_sentence(sentence_example, target_word_fixed)
         if word is None:
             # print("Can't find target word in sentence")
@@ -106,9 +112,11 @@ class WordSenseDetector:
         tokenized_input_text, hidden_states = self.run_inference(sentence_example)
         target_word_indexes = self.find_target_word_in_tokenized_text(tokenized_input_text, word)
 
+        # TODO if len(target_word_indexes) != 1:
         if len(target_word_indexes) == 0:
             # print("Cant find target word in tokens")
             return None
+        # TODO we drop all word if there are more that 2 target word occurence in example - its bad
         if len(target_word_indexes) > 1:
             # print("Skip for now")
             return None
@@ -126,6 +134,7 @@ class WordSenseDetector:
         examples = row["examples"]
         contexts = self.evaluation_dataset[self.evaluation_dataset["lemma"] == lemma]["gloss"].tolist()
 
+        # TODO create as 2 separate methods
         if self.prediction_strategy == "all_examples_to_one_embedding":
 
             # TODO: check whether it's more efficient to create numpy here
@@ -176,5 +185,7 @@ class WordSenseDetector:
             return correct_context
 
     def run(self):
+        # TODO groupby data by lemma and create list of all contexts (this will help to remove data from init and move to run)
+        # TODO rewrite apply to only 2 columns and use params (lemma-senses dict) .apply(lambda x: self.predict_word_sense(x, param), axis=1)
         self.evaluation_dataset["predicted_context"] = self.evaluation_dataset.apply(self.predict_word_sense, axis=1)
         return self.evaluation_dataset
