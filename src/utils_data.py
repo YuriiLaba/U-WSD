@@ -4,16 +4,7 @@ import pymorphy2
 import os
 import re
 import stanza
-import configparser
-
-config = configparser.ConfigParser()
-config.read('src/config.ini')
-
-MIN_LEMMA_LENTH = config.getint('PREPARATION', 'MIN_LEMMA_LENTH')
-MAX_GLOSS_OCCURRENCE = config.getint('PREPARATION', 'MAX_GLOSS_OCCURRENCE')
-
-ACUTE = chr(0x301)
-GRAVE = chr(0x300)
+from src.config import MIN_LEMMA_LENTH, MAX_GLOSS_OCCURRENCE, ACUTE, GRAVE
 
 
 def take_first_n_glosses(data, first_n_glosses):
@@ -133,7 +124,7 @@ def add_pos_tag(data_with_predictions, udpipe_model=None, engine="stanza"):
             data_with_predictions.loc[:, "pos"] = data_with_predictions.lemma.replace(pos_precalculation['pos'])
         else:
             nlp = stanza.Pipeline(lang='uk', processors='tokenize,mwt,pos', verbose=False)
-            
+
             def get_pos_tag_udpipe(word, text):
                 word = word.lower().replace(GRAVE, "").replace(ACUTE, "").replace("'", "’")
                 tokens = udpipe_model.tokenize(text)
@@ -190,7 +181,8 @@ def add_frequency_column(data, udpipe_model):
     data = pd.concat([data, data_not_merged])
     data.drop(columns=['clear_lemma', 'lemma_y', 'count', 'doc_count', 'pos_y'], inplace=True, errors='ignore')
 
-    data[['freq_by_pos', 'freq_in_corpus', 'doc_frequency']] = data[['freq_by_pos', 'freq_in_corpus', 'doc_frequency']].fillna(0)
+    data[['freq_by_pos', 'freq_in_corpus', 'doc_frequency']] = data[
+        ['freq_by_pos', 'freq_in_corpus', 'doc_frequency']].fillna(0)
 
     del dictionary, data_not_merged
     return data
