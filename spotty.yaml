@@ -6,31 +6,38 @@ project:
         - .git/*
         - '*/__pycache__/*'
         - data/*
+        - .ipynb_checkpoints/*
 
-container:
-  projectDir: /workspace/project
-  file: docker/Dockerfile.spotty
-  ports: [6006, 8888]
-  volumeMounts:
-    - name: workspace
-      mountPath: /workspace
+containers:
+  - projectDir: /workspace/project
+    file: docker/Dockerfile.spotty
+    ports:
+      # TensorBoard
+      - containerPort: 6006
+        hostPort: 6006
+      # Jupyter
+      - containerPort: 8888
+        hostPort: 8888
+    volumeMounts:
+      - name: workspace
+        mountPath: /workspace
 
 
 instances:
   - name: i1
     provider: aws
     parameters:
-      region: us-east-2
-      instanceType: p2.xlarge
+      region: us-east-1
+      instanceType: g4dn.xlarge
       dockerDataRoot: /docker
       volumes:
         - name: workspace
           parameters:
-            size: 50
+            size: 100
             deletionPolicy: retain
         - name: docker
           parameters:
-            size: 10
+            size: 50
             mountDir: /docker
             deletionPolicy: retain
 
