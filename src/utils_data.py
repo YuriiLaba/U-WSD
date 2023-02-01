@@ -4,20 +4,40 @@ import pymorphy2
 import os
 import re
 import stanza
-import configparser
-
-config = configparser.ConfigParser()
-config.read('src/config.ini')
-
-MIN_LEMMA_LENTH = config.getint('PREPARATION', 'MIN_LEMMA_LENTH')
-MAX_GLOSS_OCCURRENCE = config.getint('PREPARATION', 'MAX_GLOSS_OCCURRENCE')
-
-ACUTE = chr(0x301)
-GRAVE = chr(0x300)
+from src.config import MIN_LEMMA_LENTH, MAX_GLOSS_OCCURRENCE, ACUTE, GRAVE
 
 
 def take_first_n_glosses(data, first_n_glosses):
     data = data.groupby('lemma').head(first_n_glosses)
+    return data
+
+
+def clean_badly_parsed_data(data):
+    patterns_to_clear = ["(?i)Те саме[ ,]+[0-9. ,що;–)]+",
+                         "(?i)дія за знач[0-9. ,і;–)]+",
+                         "(?i)стан за знач[0-9. ,і;–)]+",
+                         "(?i)Прикм. до[0-9. ,і;–)]+",
+                         "(?i)Зменш. до[0-9. ,і;–)]+",
+                         "(?i)Вищ. ст. до[0-9. ,і;–)]+",
+                         "(?i)Док. до[0-9. ,і;–)]+",
+                         "(?i)Присл. до[0-9. ,і;–)]+",
+                         " . . [0-9 ,\)–]+"
+                         ]
+    for pattern in patterns_to_clear:
+        data.gloss = data.gloss.apply(lambda x: re.sub(pattern, '', x))
+    data = data[data['gloss'].apply(len) > 2]
+    data = data.groupby("lemma").filter(lambda x: len(x) > 1)
+
+    replace_short = {"Вигот.": "Виготовлений",
+                     "Стос.": "Стосується",
+                     "Власт.": "Властивий",
+                     "Признач.": "Призначений",
+                     "Зробл.": "Зроблений",
+                     "і т. ін.": ""}
+
+    for r in replace_short:
+        data.gloss = data.gloss.str.replace(r, replace_short[r])
+
     return data
 
 
@@ -104,7 +124,7 @@ def add_pos_tag(data_with_predictions, udpipe_model=None, engine="stanza"):
             data_with_predictions.loc[:, "pos"] = data_with_predictions.lemma.replace(pos_precalculation['pos'])
         else:
             nlp = stanza.Pipeline(lang='uk', processors='tokenize,mwt,pos', verbose=False)
-            
+
             def get_pos_tag_udpipe(word, text):
                 word = word.lower().replace(GRAVE, "").replace(ACUTE, "").replace("'", "’")
                 tokens = udpipe_model.tokenize(text)
@@ -161,7 +181,8 @@ def add_frequency_column(data, udpipe_model):
     data = pd.concat([data, data_not_merged])
     data.drop(columns=['clear_lemma', 'lemma_y', 'count', 'doc_count', 'pos_y'], inplace=True, errors='ignore')
 
-    data[['freq_by_pos', 'freq_in_corpus', 'doc_frequency']] = data[['freq_by_pos', 'freq_in_corpus', 'doc_frequency']].fillna(0)
+    data[['freq_by_pos', 'freq_in_corpus', 'doc_frequency']] = data[
+        ['freq_by_pos', 'freq_in_corpus', 'doc_frequency']].fillna(0)
 
     del dictionary, data_not_merged
     return data
