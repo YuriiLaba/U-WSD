@@ -1,4 +1,4 @@
-torch~=1.11.0
+torch~=1.13.1
 transformers~=4.22.0
 pymorphy2~=0.9.1
 pymorphy2-dicts-uk[fast]
