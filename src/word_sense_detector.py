@@ -13,11 +13,16 @@ from src.utils_model import get_hidden_states
 class WordSenseDetector:
 
     def __init__(self, pretrained_model, udpipe_model, evaluation_dataset,
-                 prediction_strategy="all_examples_to_one_embedding"):
+                 prediction_strategy="all_examples_to_one_embedding", **kwargs):
         # TODO create doc-string especially for describing prediction_strategy
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = AutoModel.from_pretrained(pretrained_model, output_hidden_states=True).to(self.device)
-        self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
+        if isinstance(pretrained_model, str):
+            self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
+            self.model = AutoModel.from_pretrained(pretrained_model, output_hidden_states=True).to(self.device)
+        else:
+            self.tokenizer = kwargs["tokenizer"]
+            self.model = pretrained_model
+            
         self.udpipe_model = udpipe_model
         self.evaluation_dataset = evaluation_dataset
         self.prediction_strategy = prediction_strategy
