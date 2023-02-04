@@ -1,0 +1,6 @@
+torch
+pandas
+neptune-client
+transformers
+datasets
+tqdm
