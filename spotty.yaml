@@ -43,9 +43,9 @@ instances:
 
 scripts:
   preprocess: |
-    wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1mW70p3xEm_H-w0KMuqsTenP7IUl9P9Lr' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1mW70p3xEm_H-w0KMuqsTenP7IUl9P9Lr" -O 2m_cosine_distances_max.csv && rm -rf /tmp/cookies.txt
+    python preprocessing.py
   train: |
-    python fine_tune_mult_neg_rank_loss.py
+    python fine_tune_pytorch.py
   tensorboard: |
     tensorboard --logdir /workspace/project/logs-Tacotron-2
   jupyter: |
