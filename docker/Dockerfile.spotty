@@ -1,4 +1,11 @@
 FROM python:3.7
 
+RUN apt-get update \
+    && apt-get install -y libboost-dev
+
 COPY requirements-spotty.txt requirements-spotty.txt
+COPY pre-install.sh pre-install.sh
+
+RUN chmod 777 pre-install.sh
+RUN ./pre-install.sh
 RUN pip3 install -r requirements-spotty.txt

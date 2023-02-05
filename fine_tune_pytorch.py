@@ -6,11 +6,16 @@ import torch
 from tqdm.auto import tqdm
 import pandas as pd
 from ast import literal_eval
-from src.utils_results import prediction_accuracy
 
 from src.word_sense_detector import WordSenseDetector
 from src.udpipe_model import UDPipeModel
+from sklearn.metrics import accuracy_score
 
+
+def prediction_accuracy(data_with_predictions):
+    data_dropna = data_with_predictions.dropna()
+
+    return accuracy_score(data_dropna["gloss"], data_dropna["predicted_context"])
 
 def mean_pool(token_embeds, attention_mask):
     in_mask = attention_mask.unsqueeze(-1).expand(
@@ -28,7 +33,7 @@ def calculate_wsd_accuracy(model, udpipe_model, eval_data, tokenizer):
         pretrained_model=model,
         udpipe_model=udpipe_model,
         evaluation_dataset=eval_data,
-        tokenizer = tokenizer)
+        tokenizer=tokenizer)
 
     eval_data = word_sense_detector.run()
     return prediction_accuracy(eval_data)
@@ -52,7 +57,7 @@ def calculate_cosine_scores(model, batch):
     return scores
 
 
-def tokenize_dataset(dataset):
+def tokenize_dataset(dataset, tokenizer):
     dataset = dataset.map(
         lambda x: tokenizer(
             x["anchor"], max_length=128, padding='max_length',
@@ -77,9 +82,8 @@ def tokenize_dataset(dataset):
     return dataset
 
 
-def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data, tokenizer, run):
+def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data, tokenizer, run, earle_stopping_rounds=30):
     batch_count = 0
-    earle_stopping_rounds = 30
     rounds_count = 0
     max_wsd_acc = 0
 
@@ -120,15 +124,16 @@ def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_d
 
                     run["eval/wsd_acc"].append(wsd_acc)
                     run["eval/loss"].append(eval_loss / len(eval_loader))
-                    model.save(f"pytorch_model")
 
                     if wsd_acc > max_wsd_acc:
                         max_wsd_acc = wsd_acc
                         rounds_count = 0
+                        model.save_pretrained("pytorch_model", from_pt=True)
                     elif wsd_acc < max_wsd_acc:
                         rounds_count += 1
 
                     if rounds_count == earle_stopping_rounds:
+                        print(f'Early stopping, model not improve WSD for {early_stopping}')
                         return
 
                 model.train()
@@ -152,14 +157,20 @@ if __name__ == "__main__":
     dataset = load_dataset('csv', data_files={'train': "500k_cosine_distances_train_gt_70_lt_90.csv",
                                               'eval': "500k_cosine_distances_eval_gt_70_lt_90.csv"})
 
-    dataset = tokenize_dataset(dataset)
+    tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')
+
+    dataset = tokenize_dataset(dataset, tokenizer)
 
     dataset.set_format(type='torch', output_all_columns=True)
 
-    tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')
-    model = AutoModel.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')
+    model = AutoModel.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2',
+                                      output_hidden_states=True)
 
     batch_size = 32
+    scale = 20.0
+    learning_rate = 2e-5
+    num_epochs = 10
+    early_stopping = 70
 
     train_loader = torch.utils.data.DataLoader(dataset["train"], batch_size=batch_size)
     eval_loader = torch.utils.data.DataLoader(dataset["eval"], batch_size=batch_size)
@@ -169,13 +180,12 @@ if __name__ == "__main__":
 
     cos_sim = torch.nn.CosineSimilarity()
     loss_func = torch.nn.CrossEntropyLoss()
-    scale = 20.0
 
     cos_sim.to(device)
     loss_func.to(device)
 
     # initialize Adam optimizer
-    optim = torch.optim.Adam(model.parameters(), lr=2e-5)
+    optim = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     # setup warmup for first ~10% of steps
     total_steps = int(len(dataset["train"]) / batch_size)
@@ -186,9 +196,12 @@ if __name__ == "__main__":
         num_training_steps=total_steps - warmup_steps
     )
 
-    num_epochs = 2
     run['epochs'] = num_epochs
     run['batch_size'] = batch_size
+    run['scale'] = scale
+    run["learning_rate"] = learning_rate
+    run["early_stopping"] = early_stopping
 
-    train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data, tokenizer, run)
+    train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data, tokenizer, run,
+          earle_stopping_rounds=early_stopping)
     run.stop()
