@@ -7,6 +7,7 @@ project:
         - '*/__pycache__/*'
         - data/*
         - .ipynb_checkpoints/*
+        - models/*
 
 containers:
   - projectDir: /workspace/project
