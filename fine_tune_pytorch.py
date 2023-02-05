@@ -151,11 +151,11 @@ if __name__ == "__main__":
 
     udpipe_model = UDPipeModel("20180506.uk.mova-institute.udpipe")
 
-    wsd_eval_data = pd.read_csv("wsd_loss_data.csv")
+    wsd_eval_data = pd.read_csv("wsd_loss_data_homonyms.csv")
     wsd_eval_data["examples"] = wsd_eval_data["examples"].apply(lambda x: literal_eval(x))
 
-    dataset = load_dataset('csv', data_files={'train': "500k_cosine_distances_train_gt_70_lt_90.csv",
-                                              'eval': "500k_cosine_distances_eval_gt_70_lt_90.csv"})
+    dataset = load_dataset('csv', data_files={'train': "wsd_lemma_homonyms_dataset_triplet_train_95.csv",
+                                              'eval': "wsd_lemma_homonyms_dataset_triplet_eval_5.csv"})
 
     tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')
 
