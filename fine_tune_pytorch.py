@@ -7,15 +7,25 @@ from tqdm.auto import tqdm
 import pandas as pd
 from ast import literal_eval
 
+import torch.nn as nn
+import torch.nn.functional as F
+
 from src.word_sense_detector import WordSenseDetector
 from src.udpipe_model import UDPipeModel
 from sklearn.metrics import accuracy_score
+
+
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+cos_sim = torch.nn.CosineSimilarity().to(device)
+cross_entropy_loss = torch.nn.CrossEntropyLoss().to(device)
+triplet_loss = nn.TripletMarginLoss(margin=1.0, p=2)
 
 
 def prediction_accuracy(data_with_predictions):
     data_dropna = data_with_predictions.dropna()
 
     return accuracy_score(data_dropna["gloss"], data_dropna["predicted_context"])
+
 
 def mean_pool(token_embeds, attention_mask):
     in_mask = attention_mask.unsqueeze(-1).expand(
@@ -39,7 +49,7 @@ def calculate_wsd_accuracy(model, udpipe_model, eval_data, tokenizer):
     return prediction_accuracy(eval_data)
 
 
-def calculate_cosine_scores(model, batch):
+def _calculate_cosine_scores(model, batch):
     anchor_ids = batch['anchor_ids'].to(device)
     anchor_mask = batch['anchor_mask'].to(device)
     pos_ids = batch['positive_ids'].to(device)
@@ -57,7 +67,32 @@ def calculate_cosine_scores(model, batch):
     return scores
 
 
-def tokenize_dataset(dataset, tokenizer):
+def calculate_mnr_loss(model, batch):
+    scores = _calculate_cosine_scores(model, batch)
+    labels = torch.tensor(range(len(scores)), dtype=torch.long, device=scores.device)
+    return cross_entropy_loss(scores * scale, labels)
+
+
+def calculate_triplet_loss(model, batch):
+    anchor_ids = batch['anchor_ids'].to(device)
+    anchor_mask = batch['anchor_mask'].to(device)
+    pos_ids = batch['positive_ids'].to(device)
+    pos_mask = batch['positive_mask'].to(device)
+    neg_ids = batch['negative_ids'].to(device)
+    neg_mask = batch['negative_mask'].to(device)
+
+    a = model(anchor_ids, attention_mask=anchor_mask)[0]
+    p = model(pos_ids, attention_mask=pos_mask)[0]
+    n = model(neg_ids, attention_mask=neg_mask)[0]
+
+    a = mean_pool(a, anchor_mask)
+    p = mean_pool(p, pos_mask)
+    n = mean_pool(n, neg_mask)
+
+    return triplet_loss(a, p, n)
+
+
+def tokenize_dataset(dataset, tokenizer, loss_name):
     dataset = dataset.map(
         lambda x: tokenizer(
             x["anchor"], max_length=128, padding='max_length',
@@ -79,10 +114,23 @@ def tokenize_dataset(dataset, tokenizer):
     dataset = dataset.rename_column('attention_mask', 'positive_mask')
 
     dataset = dataset.remove_columns(['anchor', 'positive'])
+
+    if loss_name == "triplet":
+        dataset = dataset.map(
+            lambda x: tokenizer(
+                x['negative'], max_length=128, padding='max_length',
+                truncation=True
+            ), batched=True
+        )
+        dataset = dataset.rename_column('input_ids', 'negative_ids')
+        dataset = dataset.rename_column('attention_mask', 'negative_mask')
+        dataset = dataset.remove_columns(['negative'])
+
     return dataset
 
 
-def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data, tokenizer, run, earle_stopping_rounds=30):
+def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data,
+          tokenizer, run, loss_name, earle_stopping_rounds=30):
     batch_count = 0
     rounds_count = 0
     max_wsd_acc = 0
@@ -95,16 +143,16 @@ def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_d
 
             optim.zero_grad()
 
-            scores = calculate_cosine_scores(model, batch)
-
-            labels = torch.tensor(range(len(scores)), dtype=torch.long, device=scores.device)
-
-            loss = loss_func(scores * scale, labels)
+            if loss_name == "mnr":
+                loss = calculate_mnr_loss(model, batch)
+            elif loss_name == "triplet":
+                loss = calculate_triplet_loss(model, batch)
+            else:
+                raise Exception("Undefined loss!")
 
             loss.backward()
             optim.step()
             scheduler.step()
-
             run["train/loss"].append(loss.item())
 
             if batch_count % 100 == 0:
@@ -112,12 +160,12 @@ def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_d
                 eval_loss = 0
                 with torch.no_grad():
                     for eval_batch in eval_loader:
-                        scores = calculate_cosine_scores(model, eval_batch)
-                        labels = torch.tensor(range(len(scores)), dtype=torch.long, device=scores.device)
-                        eval_loss += loss_func(scores * scale, labels).item()
-                    print("Eval loss: " + str(round(eval_loss / len(eval_loader), 3)))
+                        if loss_name == "mnr":
+                            eval_loss = calculate_mnr_loss(model, eval_batch)
+                        if loss_name == "triplet":
+                            eval_loss = calculate_triplet_loss(model, eval_batch)
 
-                    del labels, scores
+                    print("Eval loss: " + str(round(eval_loss / len(eval_loader), 3)))
 
                     wsd_acc = calculate_wsd_accuracy(model, udpipe_model, wsd_eval_data, tokenizer)
                     print("WSD accuracy: " + str(wsd_acc))
@@ -140,6 +188,7 @@ def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_d
             batch_count += 1
             loop.set_description(f'Epoch {epoch}')
 
+        model.save_pretrained(f'pytorch_model {epoch}', from_pt=True)
         batch_count = 0
 
 
@@ -148,6 +197,13 @@ if __name__ == "__main__":
         project="vova.mudruy/WSD",
         api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiJlYTg0NWQxYy0zNTVkLTQwZDktODJhZC00ZjgxNGNhODE2OTIifQ==",
     )
+
+    batch_size = 32
+    scale = 20.0
+    learning_rate = 2e-5
+    num_epochs = 10
+    early_stopping = 70
+    loss_name = "triplet"
 
     udpipe_model = UDPipeModel("20180506.uk.mova-institute.udpipe")
 
@@ -159,30 +215,15 @@ if __name__ == "__main__":
 
     tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')
 
-    dataset = tokenize_dataset(dataset, tokenizer)
+    dataset = tokenize_dataset(dataset, tokenizer, loss_name)
 
     dataset.set_format(type='torch', output_all_columns=True)
 
     model = AutoModel.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2',
-                                      output_hidden_states=True)
+                                      output_hidden_states=True).to(device)
 
-    batch_size = 32
-    scale = 20.0
-    learning_rate = 2e-5
-    num_epochs = 10
-    early_stopping = 70
-
-    train_loader = torch.utils.data.DataLoader(dataset["train"], batch_size=batch_size)
-    eval_loader = torch.utils.data.DataLoader(dataset["eval"], batch_size=batch_size)
-
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    model.to(device)
-
-    cos_sim = torch.nn.CosineSimilarity()
-    loss_func = torch.nn.CrossEntropyLoss()
-
-    cos_sim.to(device)
-    loss_func.to(device)
+    train_loader = torch.utils.data.DataLoader(dataset["train"], batch_size=batch_size, shuffle=True)
+    eval_loader = torch.utils.data.DataLoader(dataset["eval"], batch_size=batch_size, shuffle=True)
 
     # initialize Adam optimizer
     optim = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -202,6 +243,6 @@ if __name__ == "__main__":
     run["learning_rate"] = learning_rate
     run["early_stopping"] = early_stopping
 
-    train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data, tokenizer, run,
+    train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data, tokenizer, run, loss_name,
           earle_stopping_rounds=early_stopping)
     run.stop()
