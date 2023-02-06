@@ -6,14 +6,18 @@ import torch
 from tqdm.auto import tqdm
 import pandas as pd
 from ast import literal_eval
-
+import os
 import torch.nn as nn
-import torch.nn.functional as F
 
 from src.word_sense_detector import WordSenseDetector
 from src.udpipe_model import UDPipeModel
 from sklearn.metrics import accuracy_score
 
+import gc
+def report_gpu():
+   print(torch.cuda.list_gpu_processes())
+   gc.collect()
+   torch.cuda.empty_cache()
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 cos_sim = torch.nn.CosineSimilarity().to(device)
@@ -89,6 +93,8 @@ def calculate_triplet_loss(model, batch):
     p = mean_pool(p, pos_mask)
     n = mean_pool(n, neg_mask)
 
+    del anchor_ids, anchor_mask, pos_ids, pos_mask, neg_ids, neg_mask, batch
+
     return triplet_loss(a, p, n)
 
 
@@ -131,6 +137,9 @@ def tokenize_dataset(dataset, tokenizer, loss_name):
 
 def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data,
           tokenizer, run, loss_name, earle_stopping_rounds=30):
+
+    os.mkdir('trained_models')
+
     batch_count = 0
     rounds_count = 0
     max_wsd_acc = 0
@@ -161,9 +170,9 @@ def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_d
                 with torch.no_grad():
                     for eval_batch in eval_loader:
                         if loss_name == "mnr":
-                            eval_loss = calculate_mnr_loss(model, eval_batch)
+                            eval_loss += calculate_mnr_loss(model, eval_batch).item()
                         if loss_name == "triplet":
-                            eval_loss = calculate_triplet_loss(model, eval_batch)
+                            eval_loss += calculate_triplet_loss(model, eval_batch).item()
 
                     print("Eval loss: " + str(round(eval_loss / len(eval_loader), 3)))
 
@@ -176,19 +185,26 @@ def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_d
                     if wsd_acc > max_wsd_acc:
                         max_wsd_acc = wsd_acc
                         rounds_count = 0
-                        model.save_pretrained("pytorch_model", from_pt=True)
+                        try:
+                            model.save_pretrained(f"trained_models/model_{run.get_run_url().split('/')[-1][4:]}_{epoch}_{batch_count}", from_pt=True)
+                        except:
+                            pass
+
                     elif wsd_acc < max_wsd_acc:
                         rounds_count += 1
 
                     if rounds_count == earle_stopping_rounds:
                         print(f'Early stopping, model not improve WSD for {early_stopping}')
                         return
-
+                report_gpu()
                 model.train()
             batch_count += 1
             loop.set_description(f'Epoch {epoch}')
 
-        model.save_pretrained(f'pytorch_model {epoch}', from_pt=True)
+        try:
+            model.save_pretrained(f"trained_models/model_{run.get_run_url().split('/')[-1][4:]}_{epoch}", from_pt=True)
+        except:
+            pass
         batch_count = 0
 
 
@@ -200,9 +216,9 @@ if __name__ == "__main__":
 
     batch_size = 32
     scale = 20.0
-    learning_rate = 2e-5
+    learning_rate = 1e-6
     num_epochs = 10
-    early_stopping = 70
+    early_stopping = 50
     loss_name = "triplet"
 
     udpipe_model = UDPipeModel("20180506.uk.mova-institute.udpipe")

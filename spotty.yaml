@@ -8,6 +8,7 @@ project:
         - data/*
         - .ipynb_checkpoints/*
         - models/*
+        - notebooks/*
 
 containers:
   - projectDir: /workspace/project
