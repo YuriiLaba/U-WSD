@@ -19,10 +19,47 @@ def report_gpu():
    gc.collect()
    torch.cuda.empty_cache()
 
+
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 cos_sim = torch.nn.CosineSimilarity().to(device)
 cross_entropy_loss = torch.nn.CrossEntropyLoss().to(device)
 triplet_loss = nn.TripletMarginLoss(margin=1.0, p=2)
+
+
+class ModelWithRandomizingSomeWeights(nn.Module):
+
+    def __init__(self, reinit_n_layers=0):
+        super().__init__()
+        self.roberta_model = AutoModel.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2', output_hidden_states=True)
+        # self.regressor = nn.Linear(768, 1)
+        self.reinit_n_layers = reinit_n_layers
+        if reinit_n_layers > 0: self._do_reinit()
+
+    def _do_reinit(self):
+        # Re-init pooler.
+        self.roberta_model.pooler.dense.weight.data.normal_(mean=0.0, std=self.roberta_model.config.initializer_range)
+        self.roberta_model.pooler.dense.bias.data.zero_()
+        for param in self.roberta_model.pooler.parameters():
+            param.requires_grad = True
+
+        # Re-init last n layers.
+        for n in range(self.reinit_n_layers):
+            self.roberta_model.encoder.layer[-(n+1)].apply(self._init_weight_and_bias)
+
+    def _init_weight_and_bias(self, module):
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=self.roberta_model.config.initializer_range)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+
+    def forward(self, input_ids, attention_mask):
+        raw_output = self.roberta_model(input_ids, attention_mask)
+        # pooler = raw_output["pooler_output"]    # Shape is [batch_size, 768]
+        # output = self.regressor(pooler)         # Shape is [batch_size, 1]
+        return raw_output
 
 
 def prediction_accuracy(data_with_predictions):
@@ -219,6 +256,7 @@ if __name__ == "__main__":
     learning_rate = 2e-6
     num_epochs = 10
     early_stopping = 50
+    reinit_n_layers = 3
     loss_name = "triplet"
 
     udpipe_model = UDPipeModel("20180506.uk.mova-institute.udpipe")
@@ -237,6 +275,8 @@ if __name__ == "__main__":
 
     model = AutoModel.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2',
                                       output_hidden_states=True).to(device)
+
+    # model = ModelWithRandomizingSomeWeights(reinit_n_layers=reinit_n_layers).to(device)
 
     train_loader = torch.utils.data.DataLoader(dataset["train"], batch_size=batch_size, shuffle=True)
     eval_loader = torch.utils.data.DataLoader(dataset["eval"], batch_size=batch_size, shuffle=True)
