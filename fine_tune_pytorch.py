@@ -2,18 +2,27 @@ from transformers import AutoTokenizer, AutoModel
 from datasets import load_dataset
 from transformers.optimization import get_linear_schedule_with_warmup
 import neptune.new as neptune
-import torch
+# from neptune.new.types import File
 from tqdm.auto import tqdm
 import pandas as pd
 from ast import literal_eval
 import os
+import gc
 import torch.nn as nn
 
 from src.word_sense_detector import WordSenseDetector
 from src.udpipe_model import UDPipeModel
 from sklearn.metrics import accuracy_score
 
-import gc
+import torch
+import random
+import numpy as np
+
+torch.manual_seed(47)
+random.seed(92)
+np.random.seed(39)
+
+
 def report_gpu():
    print(torch.cuda.list_gpu_processes())
    gc.collect()
@@ -264,8 +273,8 @@ if __name__ == "__main__":
     wsd_eval_data = pd.read_csv("wsd_loss_data_homonyms.csv")
     wsd_eval_data["examples"] = wsd_eval_data["examples"].apply(lambda x: literal_eval(x))
 
-    dataset = load_dataset('csv', data_files={'train': "wsd_lemma_homonyms_dataset_triplet_train_95.csv",
-                                              'eval': "wsd_lemma_homonyms_dataset_triplet_eval_5.csv"})
+    dataset = load_dataset('csv', data_files={'train': "wsd_lemma_homonyms_dataset_triplet_500k_train_95.csv",
+                                              'eval': "wsd_lemma_homonyms_dataset_triplet_500k_eval_5.csv"})
 
     tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')
 
@@ -298,6 +307,9 @@ if __name__ == "__main__":
     run['scale'] = scale
     run["learning_rate"] = learning_rate
     run["early_stopping"] = early_stopping
+    run["dataset/train"] = len(dataset["train"])
+    run["dataset/eval"] = len(dataset["eval"])
+    # run["dataset/head"].upload(File.as_html(iris_df))
 
     train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data, tokenizer, run, loss_name,
           earle_stopping_rounds=early_stopping)
