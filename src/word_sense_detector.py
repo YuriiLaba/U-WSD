@@ -21,7 +21,7 @@ class WordSenseDetector:
             self.model = AutoModel.from_pretrained(pretrained_model, output_hidden_states=True).to(self.device)
         else:
             self.tokenizer = kwargs["tokenizer"]
-            self.model = pretrained_model
+            self.model = pretrained_model.to(self.device)
             
         self.udpipe_model = udpipe_model
         self.evaluation_dataset = evaluation_dataset
