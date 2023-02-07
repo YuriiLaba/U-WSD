@@ -17,6 +17,7 @@ from sklearn.metrics import accuracy_score
 import torch
 import random
 import numpy as np
+import transformers
 
 torch.manual_seed(47)
 random.seed(92)
@@ -34,6 +35,62 @@ cos_sim = torch.nn.CosineSimilarity().to(device)
 cross_entropy_loss = torch.nn.CrossEntropyLoss().to(device)
 triplet_loss = nn.TripletMarginLoss(margin=1.0, p=2)
 
+
+def roberta_base_AdamW_LLRD(model):
+
+    opt_parameters = []    # To be passed to the optimizer (only parameters of the layers you want to update).
+    named_parameters = list(model.named_parameters())
+
+    # According to AAAMLP book by A. Thakur, we generally do not use any decay
+    # for bias and LayerNorm.weight layers.
+    no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
+    init_lr = 3.5e-6
+    head_lr = 3.6e-6
+    lr = init_lr
+
+    # === Pooler and regressor ======================================================
+
+    params_0 = [p for n,p in named_parameters if ("pooler" in n or "regressor" in n)
+                and any(nd in n for nd in no_decay)]
+    params_1 = [p for n,p in named_parameters if ("pooler" in n or "regressor" in n)
+                and not any(nd in n for nd in no_decay)]
+
+    head_params = {"params": params_0, "lr": head_lr, "weight_decay": 0.0}
+    opt_parameters.append(head_params)
+
+    head_params = {"params": params_1, "lr": head_lr, "weight_decay": 0.01}
+    opt_parameters.append(head_params)
+
+    # === 12 Hidden layers ==========================================================
+
+    for layer in range(11,-1,-1):
+        params_0 = [p for n,p in named_parameters if f"encoder.layer.{layer}." in n
+                    and any(nd in n for nd in no_decay)]
+        params_1 = [p for n,p in named_parameters if f"encoder.layer.{layer}." in n
+                    and not any(nd in n for nd in no_decay)]
+
+        layer_params = {"params": params_0, "lr": lr, "weight_decay": 0.0}
+        opt_parameters.append(layer_params)
+
+        layer_params = {"params": params_1, "lr": lr, "weight_decay": 0.01}
+        opt_parameters.append(layer_params)
+
+        lr *= 0.9
+
+        # === Embeddings layer ==========================================================
+
+    params_0 = [p for n,p in named_parameters if "embeddings" in n
+                and any(nd in n for nd in no_decay)]
+    params_1 = [p for n,p in named_parameters if "embeddings" in n
+                and not any(nd in n for nd in no_decay)]
+
+    embed_params = {"params": params_0, "lr": lr, "weight_decay": 0.0}
+    opt_parameters.append(embed_params)
+
+    embed_params = {"params": params_1, "lr": lr, "weight_decay": 0.01}
+    opt_parameters.append(embed_params)
+
+    return transformers.AdamW(opt_parameters, lr=init_lr)
 
 class ModelWithRandomizingSomeWeights(nn.Module):
 
@@ -182,7 +239,7 @@ def tokenize_dataset(dataset, tokenizer, loss_name):
 
 
 def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data,
-          tokenizer, run, loss_name, earle_stopping_rounds=30):
+          tokenizer, run, loss_name, optim, scheduler, earle_stopping_rounds=30):
 
     os.mkdir('trained_models')
 
@@ -292,6 +349,7 @@ if __name__ == "__main__":
 
     # initialize Adam optimizer
     optim = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    # optim, _ = roberta_base_AdamW_LLRD(model)
 
     # setup warmup for first ~10% of steps
     total_steps = int(len(dataset["train"]) / batch_size)
@@ -311,6 +369,6 @@ if __name__ == "__main__":
     run["dataset/eval"] = len(dataset["eval"])
     # run["dataset/head"].upload(File.as_html(iris_df))
 
-    train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data, tokenizer, run, loss_name,
-          earle_stopping_rounds=early_stopping)
+    train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data, tokenizer, run, loss_name, optim,
+          scheduler, earle_stopping_rounds=early_stopping)
     run.stop()
