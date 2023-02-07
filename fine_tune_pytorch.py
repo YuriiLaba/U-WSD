@@ -216,7 +216,7 @@ if __name__ == "__main__":
 
     batch_size = 32
     scale = 20.0
-    learning_rate = 1e-6
+    learning_rate = 2e-6
     num_epochs = 10
     early_stopping = 50
     loss_name = "triplet"
