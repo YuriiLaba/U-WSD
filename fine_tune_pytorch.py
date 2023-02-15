@@ -2,7 +2,6 @@ from transformers import AutoTokenizer, AutoModel
 from datasets import load_dataset
 from transformers.optimization import get_linear_schedule_with_warmup
 import neptune.new as neptune
-# from neptune.new.types import File
 from tqdm.auto import tqdm
 import pandas as pd
 from ast import literal_eval
@@ -25,9 +24,8 @@ np.random.seed(39)
 
 
 def report_gpu():
-   print(torch.cuda.list_gpu_processes())
-   gc.collect()
    torch.cuda.empty_cache()
+   gc.collect()
 
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -247,39 +245,56 @@ def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_d
     rounds_count = 0
     max_wsd_acc = 0
 
+    scaler = torch.cuda.amp.GradScaler()
+
     for epoch in range(num_epochs):
         model.train()
         loop = tqdm(train_loader, leave=True)
 
         for batch in loop:
 
-            optim.zero_grad()
+            with torch.cuda.amp.autocast():
+                if loss_name == "mnr":
+                    loss = calculate_mnr_loss(model, batch)
+                elif loss_name == "triplet":
+                    loss = calculate_triplet_loss(model, batch)
+                else:
+                    raise Exception("Undefined loss!")
 
-            if loss_name == "mnr":
-                loss = calculate_mnr_loss(model, batch)
-            elif loss_name == "triplet":
-                loss = calculate_triplet_loss(model, batch)
-            else:
-                raise Exception("Undefined loss!")
+            scaler.scale(loss).backward()
+            # loss.backward()
 
-            loss.backward()
-            optim.step()
+            # Normalize the Gradients
+            loss = loss / NUM_ACCUMULATION_STEPS
+
+            # ⭐️⭐️ Gradient Accumulation
+            if ((batch_count + 1) % NUM_ACCUMULATION_STEPS == 0) or (batch_count + 1 == len(train_loader)):
+                scaler.step(optim)
+                # optim.step()
+                scaler.update()
+                optim.zero_grad()
+
             scheduler.step()
+
             run["train/loss"].append(loss.item())
 
+            report_gpu()
             if batch_count % 100 == 0:
                 model.eval()
                 eval_loss = 0
                 with torch.no_grad():
                     for eval_batch in eval_loader:
-                        if loss_name == "mnr":
-                            eval_loss += calculate_mnr_loss(model, eval_batch).item()
-                        if loss_name == "triplet":
-                            eval_loss += calculate_triplet_loss(model, eval_batch).item()
+                        with torch.cuda.amp.autocast():
+                            if loss_name == "mnr":
+                                eval_loss += calculate_mnr_loss(model, eval_batch).item()
+                            if loss_name == "triplet":
+                                eval_loss += calculate_triplet_loss(model, eval_batch).item()
+                        report_gpu()
 
                     print("Eval loss: " + str(round(eval_loss / len(eval_loader), 3)))
 
                     wsd_acc = calculate_wsd_accuracy(model, udpipe_model, wsd_eval_data, tokenizer)
+                    report_gpu()
                     print("WSD accuracy: " + str(wsd_acc))
 
                     run["eval/wsd_acc"].append(wsd_acc)
@@ -289,9 +304,10 @@ def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_d
                         max_wsd_acc = wsd_acc
                         rounds_count = 0
                         try:
-                            model.save_pretrained(f"trained_models/model_{run.get_run_url().split('/')[-1][4:]}_{epoch}_{batch_count}", from_pt=True)
+                            if batch_count > 0:
+                                model.save_pretrained(f"trained_models/model_{run.get_run_url().split('/')[-1][4:]}_{epoch}_{batch_count}", from_pt=True)
                         except:
-                            pass
+                            print(f'model not saved epoch = {epoch}, batch = {batch_count}')
 
                     elif wsd_acc < max_wsd_acc:
                         rounds_count += 1
@@ -299,7 +315,7 @@ def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_d
                     if rounds_count == earle_stopping_rounds:
                         print(f'Early stopping, model not improve WSD for {early_stopping}')
                         return
-                report_gpu()
+
                 model.train()
             batch_count += 1
             loop.set_description(f'Epoch {epoch}')
@@ -307,7 +323,7 @@ def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_d
         try:
             model.save_pretrained(f"trained_models/model_{run.get_run_url().split('/')[-1][4:]}_{epoch}", from_pt=True)
         except:
-            pass
+            print(f'model not saved epoch = {epoch}, batch = {batch_count}')
         batch_count = 0
 
 
@@ -324,14 +340,15 @@ if __name__ == "__main__":
     early_stopping = 50
     reinit_n_layers = 3
     loss_name = "triplet"
+    NUM_ACCUMULATION_STEPS = 8
 
     udpipe_model = UDPipeModel("20180506.uk.mova-institute.udpipe")
 
     wsd_eval_data = pd.read_csv("wsd_loss_data_homonyms.csv")
     wsd_eval_data["examples"] = wsd_eval_data["examples"].apply(lambda x: literal_eval(x))
 
-    dataset = load_dataset('csv', data_files={'train': "wsd_lemma_homonyms_dataset_triplet_500k_train_95.csv",
-                                              'eval': "wsd_lemma_homonyms_dataset_triplet_500k_eval_5.csv"})
+    dataset = load_dataset('csv', data_files={'train': "wsd_lemma_homonyms_dataset_triplet_2m_train_99.csv",
+                                              'eval': "wsd_lemma_homonyms_dataset_triplet_2m_eval_1.csv"})
 
     tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')
 
@@ -367,7 +384,8 @@ if __name__ == "__main__":
     run["early_stopping"] = early_stopping
     run["dataset/train"] = len(dataset["train"])
     run["dataset/eval"] = len(dataset["eval"])
-    # run["dataset/head"].upload(File.as_html(iris_df))
+    run["dataset/diff_threshold"] = 0.3
+    run["NUM_ACCUMULATION_STEPS"] = NUM_ACCUMULATION_STEPS
 
     train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data, tokenizer, run, loss_name, optim,
           scheduler, earle_stopping_rounds=early_stopping)

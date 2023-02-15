@@ -22,7 +22,6 @@ class WordSenseDetector:
         else:
             self.tokenizer = kwargs["tokenizer"]
             self.model = pretrained_model.to(self.device)
-            
         self.udpipe_model = udpipe_model
         self.evaluation_dataset = evaluation_dataset
         self.prediction_strategy = prediction_strategy
@@ -159,13 +158,20 @@ class WordSenseDetector:
             combined_embedding = np.mean(combined_embedding, axis=0)
 
             for context in contexts:
-                context_embedding = self.get_context_embedding(context)
-                similarity = 1 - distance.cosine(combined_embedding, context_embedding)
+                max_sub_sim = -1
+                correct_sub_context = None
 
-                if similarity > max_sim:
-                    max_sim = similarity
+                for sub_context in context:
+                    sub_context_embedding = self.get_context_embedding(sub_context)
+                    sub_similarity = 1 - distance.cosine(combined_embedding, sub_context_embedding)
+
+                    if sub_similarity > max_sub_sim:
+                        max_sub_sim = sub_similarity
+                        correct_sub_context = context
+
+                if max_sub_sim > max_sim:
+                    max_sim = max_sub_sim
                     correct_context = context
-
             return correct_context
 
         if self.prediction_strategy == "max_sim_across_all_examples":

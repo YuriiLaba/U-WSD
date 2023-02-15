@@ -5,6 +5,8 @@ import os
 import re
 import stanza
 from src.config import MIN_LEMMA_LENTH, MAX_GLOSS_OCCURRENCE, ACUTE, GRAVE
+from functools import reduce
+import operator
 
 
 def take_first_n_glosses(data, first_n_glosses):
@@ -51,14 +53,15 @@ def read_and_transform_data(path, homonym=False, gloss_strategy='first'):
     if homonym:
         data['lemma'] = data.lemma.apply(lambda x: x.lower().replace(GRAVE, "").replace(ACUTE, ""))
         data = data.groupby("lemma").filter(lambda x: len(x) > 1)
-        data['synsets'] = data['synsets'].apply(lambda x: x[0])
-    else:
-        data = data.explode('synsets')
+        # data['synsets'] = data['synsets'].apply(lambda x: x[0])
+        data['order'] = data.groupby('lemma', as_index=False)['lemma'].cumcount()
+
+    data = data.explode('synsets')
 
     data = data[data['synsets'].apply(lambda x: len(x['gloss'])) > 0]
     data = data[data['synsets'].apply(lambda x: len(x['examples'])) > 0]
 
-    data = pd.concat([data.lemma, data.synsets.apply(pd.Series)], axis=1)
+    data = pd.concat([data[['lemma', 'order']], data.synsets.apply(pd.Series)], axis=1)
     data.drop(columns=['sense_id'], inplace=True)
 
     if gloss_strategy == 'first':
@@ -74,6 +77,10 @@ def read_and_transform_data(path, homonym=False, gloss_strategy='first'):
 
     pattern = r' \([^\(]*?знач[^\)]*?\)'
     data.gloss = data.gloss.apply(lambda x: re.sub(pattern, '', x))
+
+    data = data.groupby(['lemma', 'order']).agg({"gloss": list,
+                                                 "examples": lambda x: reduce(operator.concat, x)}).reset_index().drop(columns=['order'])
+
     return data
 
 
