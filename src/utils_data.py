@@ -43,6 +43,40 @@ def clean_badly_parsed_data(data):
     return data
 
 
+def remove_sense_reference(data):
+    patterns_to_clear = ["Те саме", "дія за знач",
+                         "стан за знач",
+                         "Прикм. до",
+                         "Зменш. до",
+                         "Вищ. ст. до",
+                         "Док. до",
+                         "Присл. до",
+                         "Стос. до",
+                         "Однокр. до",
+                         "Дієпр. пас.",
+                         "Пестл. до",
+                         "Дія за знач.",
+                         "Збільш. до",
+                         "Дієпр. акт",
+                         "Абстр. ім.",
+                         "Пас. до",
+                         "Зменш.-пестл. до",
+                         "Жін. до",
+                         "Підсил. до",
+                         "Стан за знач."
+                         ]
+
+    def check_if_drop(row):
+        for i in patterns_to_clear:
+            for gloss in row:
+                if i in gloss:
+                    return True
+        return False
+
+    lemmas_to_drop = data[data["gloss"].apply(check_if_drop)]["lemma"].values
+    return data[~data["lemma"].isin(lemmas_to_drop)]
+
+
 def read_and_transform_data(path, homonym=False, gloss_strategy='first'):
     data = pd.read_json(path, lines=True).drop(columns=['suffixes', 'tags', 'phrases', 'word_id', 'url'])
     data = data[data.lemma.apply(len) > MIN_LEMMA_LENTH]
@@ -72,6 +106,9 @@ def read_and_transform_data(path, homonym=False, gloss_strategy='first'):
     data['examples'] = data['examples'].apply(lambda x: [i["ex_text"] for i in x])
     gloss_to_remove = data.groupby("gloss").filter(lambda x: len(x) > MAX_GLOSS_OCCURRENCE)["gloss"].tolist()
     data = data[~data["gloss"].isin(gloss_to_remove)]
+
+    data = clean_badly_parsed_data(data)
+    data = remove_sense_reference(data)
 
     data = data.groupby("lemma").filter(lambda x: len(x) > 1)
 
