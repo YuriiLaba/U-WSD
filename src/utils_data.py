@@ -107,14 +107,18 @@ def read_and_transform_data(path, homonym=False, gloss_strategy='first'):
 
     data = clean_badly_parsed_data(data)
     data = remove_sense_reference(data)
+    data = data[~data.lemma.isin(['або', 'ага', 'адже', 'але', 'ану', 'ані', 'вона', 'еге', 'летяга', 'лише',
+                                  'мирно', 'немовби', 'нерозкладний', 'нехай', 'ніби', 'нібито', 'отже'] + ["коли", "отож", "геть", "єсть"])]
 
+    data.drop_duplicates(subset=['lemma', 'gloss'])
     data = data.groupby("lemma").filter(lambda x: len(x) > 1)
 
     pattern = r' \([^\(]*?знач[^\)]*?\)'
     data.gloss = data.gloss.apply(lambda x: re.sub(pattern, '', x))
 
     data = data.groupby(['lemma', 'order']).agg({"gloss": list,
-                                                 "examples": lambda x: reduce(operator.concat, x)}).reset_index().drop(columns=['order'])
+                                                 "examples": lambda x: reduce(operator.concat, x)}).reset_index().drop(
+        columns=['order'])
 
     return data
 
