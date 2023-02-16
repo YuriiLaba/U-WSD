@@ -15,23 +15,22 @@ def take_first_n_glosses(data, first_n_glosses):
 
 
 def clean_badly_parsed_data(data):
-    patterns_to_clear = ["(?i)Те саме[ ,]+[0-9. ,що;–)]+",
-                         "(?i)дія за знач[0-9. ,і;–)]+",
-                         "(?i)стан за знач[0-9. ,і;–)]+",
-                         "(?i)Прикм. до[0-9. ,і;–)]+",
-                         "(?i)Зменш. до[0-9. ,і;–)]+",
-                         "(?i)Вищ. ст. до[0-9. ,і;–)]+",
-                         "(?i)Док. до[0-9. ,і;–)]+",
-                         "(?i)Присл. до[0-9. ,і;–)]+",
-                         " . . [0-9 ,\)–]+"
-                         ]
-    for pattern in patterns_to_clear:
-        data.gloss = data.gloss.apply(lambda x: re.sub(pattern, '', x))
-    data = data[data['gloss'].apply(len) > 2]
-    data = data.groupby("lemma").filter(lambda x: len(x) > 1)
+    # patterns_to_clear = ["(?i)Те саме[ ,]+[0-9. ,що;–)]+",
+    #                      "(?i)дія за знач[0-9. ,і;–)]+",
+    #                      "(?i)стан за знач[0-9. ,і;–)]+",
+    #                      "(?i)Прикм. до[0-9. ,і;–)]+",
+    #                      "(?i)Зменш. до[0-9. ,і;–)]+",
+    #                      "(?i)Вищ. ст. до[0-9. ,і;–)]+",
+    #                      "(?i)Док. до[0-9. ,і;–)]+",
+    #                      "(?i)Присл. до[0-9. ,і;–)]+",
+    #                      " . . [0-9 ,\)–]+"
+    #                      ]
+    # for pattern in patterns_to_clear:
+    #     data.gloss = data.gloss.apply(lambda x: re.sub(pattern, '', x))
+    # data = data[data['gloss'].apply(len) > 2]
+    # data = data.groupby("lemma").filter(lambda x: len(x) > 1)
 
     replace_short = {"Вигот.": "Виготовлений",
-                     "Стос.": "Стосується",
                      "Власт.": "Властивий",
                      "Признач.": "Призначений",
                      "Зробл.": "Зроблений",
@@ -68,9 +67,8 @@ def remove_sense_reference(data):
 
     def check_if_drop(row):
         for i in patterns_to_clear:
-            for gloss in row:
-                if i in gloss:
-                    return True
+            if i in row:
+                return True
         return False
 
     lemmas_to_drop = data[data["gloss"].apply(check_if_drop)]["lemma"].values
