@@ -192,7 +192,6 @@ class WordSenseDetector:
 
             for context in contexts:
                 max_sub_sim = -1
-                correct_sub_context = None
 
                 for sub_context in context:
                     sub_context_embedding = self.get_context_embedding(sub_context)
@@ -200,7 +199,6 @@ class WordSenseDetector:
 
                     if sub_similarity > max_sub_sim:
                         max_sub_sim = sub_similarity
-                        correct_sub_context = context
 
                 if max_sub_sim > max_sim:
                     max_sim = max_sub_sim

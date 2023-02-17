@@ -93,7 +93,10 @@ def read_and_transform_data(path, homonym=False, gloss_strategy='first'):
     data = data[data['synsets'].apply(lambda x: len(x['gloss'])) > 0]
     data = data[data['synsets'].apply(lambda x: len(x['examples'])) > 0]
 
-    data = pd.concat([data[['lemma', 'order']], data.synsets.apply(pd.Series)], axis=1)
+    if homonym:
+        data = pd.concat([data[['lemma', 'order']], data.synsets.apply(pd.Series)], axis=1)
+    else:
+        data = pd.concat([data[['lemma']], data.synsets.apply(pd.Series)], axis=1)
     data.drop(columns=['sense_id'], inplace=True)
 
     if gloss_strategy == 'first':
@@ -116,9 +119,9 @@ def read_and_transform_data(path, homonym=False, gloss_strategy='first'):
     pattern = r' \([^\(]*?знач[^\)]*?\)'
     data.gloss = data.gloss.apply(lambda x: re.sub(pattern, '', x))
 
-    data = data.groupby(['lemma', 'order']).agg({"gloss": list,
-                                                 "examples": lambda x: reduce(operator.concat, x)}).reset_index().drop(
-        columns=['order'])
+    if homonym:
+        data = data.groupby(['lemma', 'order']).agg({"gloss": list,
+                                                     "examples": lambda x: reduce(operator.concat, x)}).reset_index().drop(columns=['order'])
 
     return data
 

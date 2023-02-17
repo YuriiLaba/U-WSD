@@ -128,7 +128,8 @@ class ModelWithRandomizingSomeWeights(nn.Module):
 
 def prediction_accuracy(data_with_predictions):
     data_dropna = data_with_predictions.dropna()
-
+    data_dropna['gloss'] = data_dropna['gloss'].apply(lambda x: x[0])
+    data_dropna['predicted_context'] = data_dropna['predicted_context'].apply(lambda x: x[0])
     return accuracy_score(data_dropna["gloss"], data_dropna["predicted_context"])
 
 
@@ -253,26 +254,27 @@ def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_d
 
         for batch in loop:
 
-            with torch.cuda.amp.autocast():
-                if loss_name == "mnr":
-                    loss = calculate_mnr_loss(model, batch)
-                elif loss_name == "triplet":
-                    loss = calculate_triplet_loss(model, batch)
-                else:
-                    raise Exception("Undefined loss!")
+            # with torch.cuda.amp.autocast():
+            if loss_name == "mnr":
+                loss = calculate_mnr_loss(model, batch)
+            elif loss_name == "triplet":
+                loss = calculate_triplet_loss(model, batch)
+            else:
+                raise Exception("Undefined loss!")
 
-            scaler.scale(loss).backward()
-            # loss.backward()
+            loss.backward()
+            optim.step()
+            optim.zero_grad()
 
-            # Normalize the Gradients
-            loss = loss / NUM_ACCUMULATION_STEPS
-
-            # ⭐️⭐️ Gradient Accumulation
-            if ((batch_count + 1) % NUM_ACCUMULATION_STEPS == 0) or (batch_count + 1 == len(train_loader)):
-                scaler.step(optim)
-                # optim.step()
-                scaler.update()
-                optim.zero_grad()
+            # # ⭐️⭐️ Gradient Accumulation
+            # # Normalize the Gradients
+            # scaler.scale(loss).backward()
+            # loss = loss / NUM_ACCUMULATION_STEPS
+            # if ((batch_count + 1) % NUM_ACCUMULATION_STEPS == 0) or (batch_count + 1 == len(train_loader)):
+            #     scaler.step(optim)
+            #     # optim.step()
+            #     scaler.update()
+            #     optim.zero_grad()
 
             scheduler.step()
 
@@ -346,9 +348,11 @@ if __name__ == "__main__":
 
     wsd_eval_data = pd.read_csv("wsd_loss_data_homonyms.csv")
     wsd_eval_data["examples"] = wsd_eval_data["examples"].apply(lambda x: literal_eval(x))
+    wsd_eval_data["gloss"] = wsd_eval_data["gloss"].apply(lambda x: literal_eval(x))
 
-    dataset = load_dataset('csv', data_files={'train': "wsd_lemma_homonyms_dataset_triplet_2m_train_99.csv",
-                                              'eval': "wsd_lemma_homonyms_dataset_triplet_2m_eval_1.csv"})
+
+    dataset = load_dataset('csv', data_files={'train': "wsd_lemma_homonyms_dataset_triplet_2m_filtered_train_99.csv",
+                                              'eval': "wsd_lemma_homonyms_dataset_triplet_2m_filtered_eval_1.csv"})
 
     tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')
 
@@ -385,7 +389,7 @@ if __name__ == "__main__":
     run["dataset/train"] = len(dataset["train"])
     run["dataset/eval"] = len(dataset["eval"])
     run["dataset/diff_threshold"] = 0.3
-    run["NUM_ACCUMULATION_STEPS"] = NUM_ACCUMULATION_STEPS
+    # run["NUM_ACCUMULATION_STEPS"] = NUM_ACCUMULATION_STEPS
 
     train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_data, tokenizer, run, loss_name, optim,
           scheduler, earle_stopping_rounds=early_stopping)
