@@ -122,6 +122,8 @@ def read_and_transform_data(path, homonym=False, gloss_strategy='first'):
     if homonym:
         data = data.groupby(['lemma', 'order']).agg({"gloss": list,
                                                      "examples": lambda x: reduce(operator.concat, x)}).reset_index().drop(columns=['order'])
+    else:
+        data['gloss'] = data.gloss.apply(lambda x: [x])
 
     return data
 

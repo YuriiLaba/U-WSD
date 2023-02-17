@@ -13,7 +13,7 @@ udpipe_model = UDPipeModel("data/20180506.uk.mova-institute.udpipe")
 word_sense_detector = WordSenseDetector(
     pretrained_model="sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
     udpipe_model=udpipe_model,
-    evaluation_dataset=data.head(1000),
+    evaluation_dataset=data.head(100),
     prediction_strategy="max_sim_across_all_examples"
 )
 evaluation_dataset_pd = word_sense_detector.run()
