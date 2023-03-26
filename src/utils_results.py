@@ -95,13 +95,14 @@ def generate_results_filter_lemma_frequency(data_with_predictions, udpipe_model)
     return results_df
 
 
-def results_reports(data_with_predictions, udpipe_model):
+def results_reports(data_with_predictions, udpipe_model, frequency_report=False):
     print('Accuracy by part of lang')
     print(generate_results_by_pos(data_with_predictions, udpipe_model), '\n')
     print('Accuracy by number of gloss for word')
     print(generate_results_by_count_of_gloss(data_with_predictions), '\n')
-    print('Accuracy by lemma frequency')
-    print(generate_results_filter_lemma_frequency(data_with_predictions, udpipe_model), '\n')
+    if frequency_report:
+        print('Accuracy by lemma frequency')
+        print(generate_results_filter_lemma_frequency(data_with_predictions, udpipe_model), '\n')
     print('Accuracy by taking first n gloss')
     print(generate_results_filter_gloss_frequency(data_with_predictions), '\n')
     prediction_error(data_with_predictions)

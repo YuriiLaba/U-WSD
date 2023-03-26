@@ -190,6 +190,8 @@ def add_pos_tag(data_with_predictions, udpipe_model=None, engine="stanza"):
             data_with_predictions["pos"] = data_with_predictions.apply(lambda x: get_pos_tag_udpipe(x['lemma'],
                                                                                                     x['examples'][0]),
                                                                        axis=1)
+            if not os.path.exists("data"):
+                os.mkdir('data')
             data_with_predictions[['lemma', 'pos']].set_index('lemma').to_pickle('data/pos_precalculation.pkl')
     elif engine == 'pymorphy':
         morph = pymorphy2.MorphAnalyzer(lang='uk')

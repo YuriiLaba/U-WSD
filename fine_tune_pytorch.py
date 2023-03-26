@@ -351,8 +351,8 @@ if __name__ == "__main__":
     wsd_eval_data["gloss"] = wsd_eval_data["gloss"].apply(lambda x: literal_eval(x))
 
 
-    dataset = load_dataset('csv', data_files={'train': "wsd_lemma_homonyms_dataset_triplet_2m_filtered_train_99.csv",
-                                              'eval': "wsd_lemma_homonyms_dataset_triplet_2m_filtered_eval_1.csv"})
+    dataset = load_dataset('csv', data_files={'train': "wsd_lemma_homonyms_dataset_triplet_2m_filtered_30%_train_99.csv",
+                                              'eval': "wsd_lemma_homonyms_dataset_triplet_2m_filtered_30%_eval_1.csv"})
 
     tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')
 
