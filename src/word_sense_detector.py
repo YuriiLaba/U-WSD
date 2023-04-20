@@ -182,11 +182,10 @@ class WordSenseDetector:
 
             for example in examples:
                 target_word_embedding = self.get_target_word_embedding(lemma, example)
-                if target_word_embedding is not None:
-                    combined_embedding.append(target_word_embedding)
+                if target_word_embedding is None:
+                    return None
 
-            if len(combined_embedding) == 0:
-                return None
+                combined_embedding.append(target_word_embedding)
 
             combined_embedding = np.asarray(combined_embedding)
             combined_embedding = np.mean(combined_embedding, axis=0)
