@@ -4,26 +4,31 @@ import tqdm
 import smart_open
 import json
 from langdetect import detect
+from  src.udpipe_model import UDPipeModel
+from src.config import PATH_TO_SOURCE_DATASET, PATH_TO_SOURCE_UDPIPE, PATH_TO_SAVE_GATHERED_DATASET, \
+    PATH_TO_LEMMAS_OF_INTEREST, NUMBER_OF_EXAMPLES_TO_GATHER
+
+udpipe_model = UDPipeModel(PATH_TO_SOURCE_UDPIPE)
 
 
 class CollectUberTextTriplets:
     def __init__(self, path_to_ubertext, path_to_save_gathered_dataset, path_to_lemmas_of_interest,
-                 number_of_examples_to_gather, udipipe_model):
+                 number_of_examples_to_gather):
         self.path_to_ubertext = path_to_ubertext
         self.path_to_save_gathered_dataset = path_to_save_gathered_dataset
         self.path_to_lemmas_of_interest = path_to_lemmas_of_interest
         self.number_of_examples_to_gather = number_of_examples_to_gather
-        self.udipipe_model = udipipe_model
 
         with open(self.path_to_lemmas_of_interest) as f:
             unique_lemmas = f.readlines()
         self.lemmas_of_interest = set([i.replace("\n", "") for i in unique_lemmas])
 
     def _normalize_text(self, line):
-        tokens = self.udipipe_model.tokenize(line)
+        global udpipe_model
+        tokens = udpipe_model.tokenize(line)
 
         for tok_sent in tokens:
-            self.udipipe_model.tag(tok_sent)
+            udpipe_model.tag(tok_sent)
         return {w.lemma for w in tok_sent.words[1:]}
 
     def _save_raw_examples_to_json(self, data):
@@ -93,3 +98,7 @@ class CollectUberTextTriplets:
         raw_lemma_examples = self._collect_raw_lemma_examples_dataset()
         self._save_raw_examples_to_json(raw_lemma_examples)
 
+
+if __name__ == "__main__":
+    collector = CollectUberTextTriplets(PATH_TO_SOURCE_DATASET, PATH_TO_SAVE_GATHERED_DATASET,
+                                        PATH_TO_LEMMAS_OF_INTEREST, NUMBER_OF_EXAMPLES_TO_GATHER)
