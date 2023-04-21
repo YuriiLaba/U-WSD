@@ -102,3 +102,4 @@ class CollectUberTextTriplets:
 if __name__ == "__main__":
     collector = CollectUberTextTriplets(PATH_TO_SOURCE_DATASET, PATH_TO_SAVE_GATHERED_DATASET,
                                         PATH_TO_LEMMAS_OF_INTEREST, NUMBER_OF_EXAMPLES_TO_GATHER)
+    collector.collect_triplets()
