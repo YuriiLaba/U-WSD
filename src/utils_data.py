@@ -4,7 +4,7 @@ import pymorphy2
 import os
 import re
 import stanza
-from src.config import MIN_LEMMA_LENTH, MAX_GLOSS_OCCURRENCE, ACUTE, GRAVE
+from src.config import MIN_LEMMA_LENTH, MAX_GLOSS_OCCURRENCE, ACUTE, GRAVE, LEMMAS_TO_REMOVE
 from functools import reduce
 import operator
 
@@ -43,27 +43,27 @@ def clean_badly_parsed_data(data):
 
 
 def remove_sense_reference(data):
-    patterns_to_clear = ["Те саме", "дія за знач",
-                         "стан за знач",
-                         "Прикм. до",
-                         "Зменш. до",
-                         "Вищ. ст. до",
-                         "Док. до",
-                         "Присл. до",
-                         "Стос. до",
-                         "Однокр. до",
-                         "Дієпр. пас.",
-                         "Пестл. до",
-                         "Дія за знач.",
-                         "Збільш. до",
-                         "Дієпр. акт",
-                         "Абстр. ім.",
-                         "Пас. до",
-                         "Зменш.-пестл. до",
-                         "Жін. до",
-                         "Підсил. до",
-                         "Стан за знач."
-                         ]
+    patterns_to_clear = ['Абстр. ім.',
+                         'Вищ. ст. до',
+                         'Док. до',
+                         'Дія за знач.',
+                         'Дієпр. акт',
+                         'Дієпр. пас.',
+                         'Жін. до',
+                         'Збільш. до',
+                         'Зменш. до',
+                         'Зменш.-пестл. до',
+                         'Однокр. до',
+                         'Пас. до',
+                         'Пестл. до',
+                         'Прикм. до',
+                         'Присл. до',
+                         'Підсил. до',
+                         'Стан за знач.',
+                         'Стос. до',
+                         'Те саме',
+                         'дія за знач',
+                         'стан за знач']
 
     def check_if_drop(row):
         for i in patterns_to_clear:
@@ -75,45 +75,61 @@ def remove_sense_reference(data):
     return data[~data["lemma"].isin(lemmas_to_drop)]
 
 
-def read_and_transform_data(path, homonym=False, gloss_strategy='first'):
-    data = pd.read_json(path, lines=True).drop(columns=['suffixes', 'tags', 'phrases', 'word_id', 'url'])
+def homonym_preparation(data):
+    data['lemma'] = data.lemma.apply(lambda x: x.lower().replace(GRAVE, "").replace(ACUTE, ""))
+    data = data.groupby("lemma").filter(lambda x: len(x) > 1)
+    data['order'] = data.groupby('lemma', as_index=False)['lemma'].cumcount()
+    return data
+
+
+def drop_duplicates(data):
+    data.sort_values('lemma', inplace=True)
+    data.drop_duplicates(subset=['lemma', 'gloss'], inplace=True)
+
+    data['str_examples'] = data.examples.astype(str)
+    data.drop_duplicates(subset=['str_examples', 'gloss'], inplace=True)
+    data.drop(columns=['str_examples'], inplace=True)
+    return data
+
+
+def parse_synset(data):
+    data = data.explode('synsets')
+    data = data[data['synsets'].apply(lambda x: len(x['gloss'])) > 0]
+    data = data[data['synsets'].apply(lambda x: len(x['examples'])) > 0]
+    data = pd.concat([data.drop(columns=['synsets']), data.synsets.apply(pd.Series)], axis=1)
+    data.drop(columns=['sense_id'], inplace=True)
+    data['examples'] = data['examples'].apply(lambda x: [i["ex_text"] for i in x])
+    return data
+
+
+def read_and_transform_data(path, homonym=False, gloss_strategy='first', remove_reference_lemma=True):
+    data = pd.read_json(path, lines=True).drop(columns=['suffixes', 'tags', 'phrases', 'word_id', 'url', 'prime'])
     data = data[data.lemma.apply(len) > MIN_LEMMA_LENTH]
 
     data.dropna(subset=['synsets'], inplace=True)
     data = data[data.synsets.apply(len) > 0]
 
     if homonym:
-        data['lemma'] = data.lemma.apply(lambda x: x.lower().replace(GRAVE, "").replace(ACUTE, ""))
-        data = data.groupby("lemma").filter(lambda x: len(x) > 1)
-        # data['synsets'] = data['synsets'].apply(lambda x: x[0])
-        data['order'] = data.groupby('lemma', as_index=False)['lemma'].cumcount()
+        data = homonym_preparation(data)
 
-    data = data.explode('synsets')
-
-    data = data[data['synsets'].apply(lambda x: len(x['gloss'])) > 0]
-    data = data[data['synsets'].apply(lambda x: len(x['examples'])) > 0]
-
-    if homonym:
-        data = pd.concat([data[['lemma', 'order']], data.synsets.apply(pd.Series)], axis=1)
-    else:
-        data = pd.concat([data[['lemma']], data.synsets.apply(pd.Series)], axis=1)
-    data.drop(columns=['sense_id'], inplace=True)
+    data = parse_synset(data)
 
     if gloss_strategy == 'first':
         data['gloss'] = data['gloss'].apply(lambda x: x[0])
     elif gloss_strategy == 'concat':
         data['gloss'] = data['gloss'].apply(lambda x: '. '.join(x))
 
-    data['examples'] = data['examples'].apply(lambda x: [i["ex_text"] for i in x])
     gloss_to_remove = data.groupby("gloss").filter(lambda x: len(x) > MAX_GLOSS_OCCURRENCE)["gloss"].tolist()
     data = data[~data["gloss"].isin(gloss_to_remove)]
 
     data = clean_badly_parsed_data(data)
-    data = remove_sense_reference(data)
-    data = data[~data.lemma.isin(['або', 'ага', 'адже', 'але', 'ану', 'ані', 'вона', 'еге', 'летяга', 'лише',
-                                  'мирно', 'немовби', 'нерозкладний', 'нехай', 'ніби', 'нібито', 'отже'] + ["коли", "отож", "геть", "єсть"])]
 
-    data.drop_duplicates(subset=['lemma', 'gloss'], inplace=True)
+    if remove_reference_lemma:
+        data = remove_sense_reference(data)
+
+    data = data[~data.lemma.isin(LEMMAS_TO_REMOVE)]
+
+    data = drop_duplicates(data)
 
     pattern = r' \([^\(]*?знач[^\)]*?\)'
     data.gloss = data.gloss.apply(lambda x: re.sub(pattern, '', x))
@@ -125,7 +141,6 @@ def read_and_transform_data(path, homonym=False, gloss_strategy='first'):
         data['gloss'] = data.gloss.apply(lambda x: [x])
 
     data = data.groupby("lemma").filter(lambda x: len(x) > 1)
-
     return data
 
 
