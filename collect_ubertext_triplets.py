@@ -78,11 +78,13 @@ class CollectUberTextTriplets:
         lemma_examples = {}
         total_number_of_sentences = 0
 
+        pbar = tqdm.tqdm(total=self.number_of_examples_to_gather)
         with smart_open.open(self.path_to_ubertext, encoding='utf-8') as f:
 
             for lemma_sentence in tqdm.tqdm(pool.imap_unordered(self._process_ubertext_line, f)):
                 if lemma_sentence is not None:
                     total_number_of_sentences += 1
+                    pbar.update(1)
 
                     for lemma in lemma_sentence[0]:
                         if lemma in lemma_examples.keys():
@@ -92,6 +94,7 @@ class CollectUberTextTriplets:
 
                 if total_number_of_sentences == self.number_of_examples_to_gather:
                     break
+        pbar.close()
 
         pool.close()
         pool.join()
