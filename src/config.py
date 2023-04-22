@@ -14,6 +14,6 @@ FREQUENCY_QUANTILES = 10
 # [DATA MINING]
 PATH_TO_SOURCE_DATASET = "all_uniq_filtered_shuffled.txt.bz2"
 PATH_TO_SOURCE_UDPIPE = "20180506.uk.mova-institute.udpipe"
-PATH_TO_SAVE_GATHERED_DATASET = "./lemma_examples.json"
+PATH_TO_SAVE_GATHERED_DATASET = "lemma_examples.json"
 PATH_TO_LEMMAS_OF_INTEREST = "unique_lemmas_homonyms.txt"
-NUMBER_OF_EXAMPLES_TO_GATHER = 10000
+NUMBER_OF_EXAMPLES_TO_GATHER = 5_000_000
