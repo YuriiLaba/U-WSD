@@ -1,7 +1,3 @@
-import sys
-import os
-sys.path.append("/workspace/project/src/")
-
 import multiprocessing as mp
 import string
 import tqdm
