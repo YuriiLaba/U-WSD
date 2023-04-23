@@ -63,7 +63,9 @@ def generate_results_by_count_of_gloss(data_with_predictions):
 def results_by_lemma_order(data_with_predictions):
     data_with_predictions['lemma_order'] = data_with_predictions.groupby("lemma").cumcount() + 1
     results = data_with_predictions.groupby('lemma_order').apply(prediction_accuracy)
-    results.name = 'accuracy'
+    results_count = data_with_predictions.groupby('lemma_order').lemma.count()
+    results = pd.concat([results, results_count], axis=1)
+    results.columns = ['accuracy', 'count']
     return results
 
 
@@ -73,13 +75,14 @@ def generate_results_filter_gloss_frequency(data_with_predictions):
     max_gloss_for_lemma = gef_number_of_gloss_for_lemma(data_with_predictions).max()
     for i in range(1, max_gloss_for_lemma+1):
         data_with_predictions_filtered_gloss = take_first_n_glosses(data_with_predictions, i)
-        results[f'take first {i} gloss'] = [prediction_accuracy(data_with_predictions_filtered_gloss),
+        results[i] = [prediction_accuracy(data_with_predictions_filtered_gloss),
                                             len(data_with_predictions_filtered_gloss)]
     results_df = pd.DataFrame.from_dict(results,
                                         orient='index',
                                         columns=['cum_accuracy', 'cum_count'])
 
     results_df = results_df.join(results_by_lemma_order(data_with_predictions))
+    results_df.index = 'take first ' + results_df.index.astype('str') + ' gloss'
 
     return results_df
 
@@ -105,22 +108,31 @@ def generate_results_filter_lemma_frequency(data_with_predictions, udpipe_model)
     return results_df
 
 
-def results_reports(data_with_predictions, udpipe_model, frequency_report=False):
-    print('Accuracy by part of lang')
-    print(generate_results_by_pos(data_with_predictions, udpipe_model), '\n')
-    print('Accuracy by number of gloss for word')
-    # TODO fix to avoid 1 gloss lemmas
-    print(generate_results_by_count_of_gloss(data_with_predictions), '\n')
+def results_reports(data_with_predictions, udpipe_model, frequency_report=False, verbose=True, return_results=False):
+
+    pos_results = generate_results_by_pos(data_with_predictions, udpipe_model)
+    count_gloss_results = generate_results_by_count_of_gloss(data_with_predictions)
     if frequency_report:
-        print('Accuracy by lemma frequency')
-        print(generate_results_filter_lemma_frequency(data_with_predictions, udpipe_model), '\n')
-    print('Accuracy by taking first n gloss')
-    # TODO add here accumulated accuracy and separate for each lemma
-    print(generate_results_filter_gloss_frequency(data_with_predictions), '\n')
+        frequency_results = generate_results_filter_lemma_frequency(data_with_predictions, udpipe_model)
+    gloss_order = generate_results_filter_gloss_frequency(data_with_predictions)
+
+    if verbose:
+        print('Accuracy by part of lang')
+        print(pos_results, '\n')
+        print('Accuracy by number of gloss for word')
+        # TODO fix to avoid 1 gloss lemmas
+        print(count_gloss_results, '\n')
+        if frequency_report:
+            print('Accuracy by lemma frequency')
+            print(frequency_results, '\n')
+        print('Accuracy by taking first n gloss')
+        print(gloss_order, '\n')
     prediction_error(data_with_predictions)
+    if return_results:
+        return pos_results, count_gloss_results, gloss_order
 
 
-def prediction_comparison(base, new):
+def prediction_comparison(base, new, udpipe_model):
     print(f"Total data shape = {base.shape[0]}")
     accuracy_base = prediction_accuracy(base)
     accuracy_new = prediction_accuracy(new)
@@ -133,4 +145,16 @@ def prediction_comparison(base, new):
 
     print(f"Correct in base missed in new = {correct_base_miss_new.shape[0]}")
     print(f"Correct in best missed in baseline = {correct_new_miss_base.shape[0]}")
+
+    results_base = results_reports(base, udpipe_model, verbose=False, return_results=True)
+    results_new = results_reports(new, udpipe_model, verbose=False, return_results=True)
+
+    results_base = pd.concat(results_base)[['accuracy', 'count']]
+    results_base = results_base[~results_base.index.duplicated(keep='first')]
+
+    results_new = pd.concat(results_new)[['accuracy', 'count']]
+    results_new = results_new[~results_new.index.duplicated(keep='first')]
+
+    print(results_new - results_base)
+
     return correct_base_miss_new, correct_new_miss_base
