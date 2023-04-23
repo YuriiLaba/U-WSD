@@ -12,7 +12,7 @@ from src.config import PATH_TO_SOURCE_DATASET, PATH_TO_SOURCE_UDPIPE, PATH_TO_SA
 udpipe_model = UDPipeModel(PATH_TO_SOURCE_UDPIPE)
 
 
-class CollectUberTextTriplets:
+class CollectUberTextSentences:
     def __init__(self, path_to_ubertext, path_to_save_gathered_dataset, path_to_lemmas_of_interest,
                  number_of_examples_to_gather):
         self.path_to_ubertext = path_to_ubertext
@@ -98,7 +98,7 @@ class CollectUberTextTriplets:
 
         return lemma_examples
 
-    def collect_triplets(self):
+    def collect_sentences(self):
         raw_lemma_examples = self._collect_raw_lemma_examples_dataset()
         self._save_raw_examples_to_json(raw_lemma_examples)
 
@@ -107,6 +107,6 @@ if __name__ == "__main__":
     if not os.path.exists("all_uniq_filtered_shuffled.txt.bz2"):
         os.system("""wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=19ons1AWEwbrqY7zwLYhYKHGgK6ImHw9G' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=19ons1AWEwbrqY7zwLYhYKHGgK6ImHw9G" -O all_uniq_filtered_shuffled.txt.bz2 && rm -rf /tmp/cookies.txt""")
 
-    collector = CollectUberTextTriplets(PATH_TO_SOURCE_DATASET, PATH_TO_SAVE_GATHERED_DATASET,
-                                        PATH_TO_LEMMAS_OF_INTEREST, NUMBER_OF_EXAMPLES_TO_GATHER)
-    collector.collect_triplets()
+    collector = CollectUberTextSentences(PATH_TO_SOURCE_DATASET, PATH_TO_SAVE_GATHERED_DATASET,
+                                         PATH_TO_LEMMAS_OF_INTEREST, NUMBER_OF_EXAMPLES_TO_GATHER)
+    collector.collect_sentences()
