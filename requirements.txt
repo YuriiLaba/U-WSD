@@ -11,3 +11,4 @@ scipy~=1.5.4
 
 langdetect
 smart_open[all]
+sentence_transformers

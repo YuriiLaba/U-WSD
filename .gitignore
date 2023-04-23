@@ -6,3 +6,4 @@
 *.csv
 .neptune/*
 /models
+/not_in_use

@@ -17,3 +17,6 @@ PATH_TO_SOURCE_UDPIPE = "20180506.uk.mova-institute.udpipe"
 PATH_TO_SAVE_GATHERED_DATASET = "lemma_examples.json"
 PATH_TO_LEMMAS_OF_INTEREST = "unique_lemmas_homonyms.txt"
 NUMBER_OF_EXAMPLES_TO_GATHER = 3_500_000
+EMBEDDER_MODEL = "youscan/ukr-roberta-base"
+TRIPLET_PROCESSOR_BATCH_SIZE = 500
+PATH_TO_SAVE_TRIPLETS = "ubertext_triplets.csv"
