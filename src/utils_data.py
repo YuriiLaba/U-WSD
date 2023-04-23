@@ -153,6 +153,7 @@ def prepare_frequent_dictionary(path, force_rebuild=False, save_errors=False):
     errors_lines = []
 
     # TODO think how to correct parse dictionary to avoid errors
+    # Try  ensure_ascii=False
 
     with open(path, 'rb') as compressed:
         with lzma.LZMAFile(compressed) as uncompressed:

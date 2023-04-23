@@ -60,17 +60,27 @@ def generate_results_by_count_of_gloss(data_with_predictions):
     return results_df
 
 
+def results_by_lemma_order(data_with_predictions):
+    data_with_predictions['lemma_order'] = data_with_predictions.groupby("lemma").cumcount() + 1
+    results = data_with_predictions.groupby('lemma_order').apply(prediction_accuracy)
+    results.name = 'accuracy'
+    return results
+
+
 def generate_results_filter_gloss_frequency(data_with_predictions):
     results = {'overall_accuracy': [prediction_accuracy(data_with_predictions), len(data_with_predictions)]}
 
     max_gloss_for_lemma = gef_number_of_gloss_for_lemma(data_with_predictions).max()
-    for i in range(1, max_gloss_for_lemma):
+    for i in range(1, max_gloss_for_lemma+1):
         data_with_predictions_filtered_gloss = take_first_n_glosses(data_with_predictions, i)
         results[f'take first {i} gloss'] = [prediction_accuracy(data_with_predictions_filtered_gloss),
                                             len(data_with_predictions_filtered_gloss)]
     results_df = pd.DataFrame.from_dict(results,
                                         orient='index',
-                                        columns=['accuracy', 'count'])
+                                        columns=['cum_accuracy', 'cum_count'])
+
+    results_df = results_df.join(results_by_lemma_order(data_with_predictions))
+
     return results_df
 
 
@@ -99,10 +109,28 @@ def results_reports(data_with_predictions, udpipe_model, frequency_report=False)
     print('Accuracy by part of lang')
     print(generate_results_by_pos(data_with_predictions, udpipe_model), '\n')
     print('Accuracy by number of gloss for word')
+    # TODO fix to avoid 1 gloss lemmas
     print(generate_results_by_count_of_gloss(data_with_predictions), '\n')
     if frequency_report:
         print('Accuracy by lemma frequency')
         print(generate_results_filter_lemma_frequency(data_with_predictions, udpipe_model), '\n')
     print('Accuracy by taking first n gloss')
+    # TODO add here accumulated accuracy and separate for each lemma
     print(generate_results_filter_gloss_frequency(data_with_predictions), '\n')
     prediction_error(data_with_predictions)
+
+
+def prediction_comparison(base, new):
+    print(f"Total data shape = {base.shape[0]}")
+    accuracy_base = prediction_accuracy(base)
+    accuracy_new = prediction_accuracy(new)
+
+    print(f"Accuracy base = {round(accuracy_base*100, 2)}%")
+    print(f"Accuracy new = {round(accuracy_new*100, 2)}%")
+    print(f"Improved by {round((accuracy_new - accuracy_base) * 100, 3)}%, its {round((accuracy_new - accuracy_base) * base.shape[0], 0)} samples")
+    correct_base_miss_new = base[(base.gloss == base.predicted_context) & (new.gloss != new.predicted_context)]
+    correct_new_miss_base = new[(base.gloss != base.predicted_context) & (new.gloss == new.predicted_context)]
+
+    print(f"Correct in base missed in new = {correct_base_miss_new.shape[0]}")
+    print(f"Correct in best missed in baseline = {correct_new_miss_base.shape[0]}")
+    return correct_base_miss_new, correct_new_miss_base

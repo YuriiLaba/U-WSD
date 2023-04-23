@@ -38,9 +38,9 @@ class CollectUberTextSentences:
 
     def _process_ubertext_line(self, line):
         line = line.replace("\n", "").replace("\xa0", " ").strip()
+        line = ' '.join(line.split())
 
         line_ = line.translate(str.maketrans('', '', string.punctuation))  # remove punctuation from a processing line
-        line_ = ' '.join(line_.split())
 
         lint_split = line_.split(" ")
         if len(lint_split) <= 7 or len(lint_split) >= 16:
