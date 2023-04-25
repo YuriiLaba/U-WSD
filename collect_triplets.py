@@ -26,7 +26,7 @@ triplets = pd.DataFrame(columns=['lemma', 'anchor', 'positive', 'negative', 'pos
 
 for lemma in tqdm.tqdm(lemma_examples_dataset.keys()):
 
-    if len(lemma_examples_dataset[lemma]) <= 2:
+    if len(lemma_examples_dataset[lemma]) < 3:
         continue
 
     sentences = list(set(lemma_examples_dataset[lemma]))
