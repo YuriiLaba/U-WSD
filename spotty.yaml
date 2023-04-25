@@ -26,7 +26,7 @@ containers:
 
 
 instances:
-  - name: i2
+  - name: wsd-training
     provider: aws
     parameters:
       region: us-east-1
@@ -35,7 +35,7 @@ instances:
       volumes:
         - name: workspace
           parameters:
-            size: 110
+            size: 80
             deletionPolicy: retain
         - name: docker
           parameters:
@@ -48,7 +48,7 @@ scripts:
     python preprocessing.py
   train: |
     python fine_tune_pytorch.py
-  tensorboard: |
-    tensorboard --logdir /workspace/project/logs-Tacotron-2
-  jupyter: |
-    jupyter notebook --allow-root --ip 0.0.0.0 --notebook-dir=/workspace/project
+  data-collection: |
+    python collect_ubertext_sentences.py
+  triplets-collection: |
+    python collect_triplets.py
