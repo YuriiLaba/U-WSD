@@ -142,6 +142,7 @@ def train(config):
                                    negative=eval_data["negative"].values,
                                    tokenizer=tokenizer)
 
+    # TODO add paralele batch loader
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=config.getint('MODEL_TUNING', 'batch_size'), shuffle=True)
     eval_loader = torch.utils.data.DataLoader(eval_dataset,
@@ -186,6 +187,7 @@ def train(config):
                 scheduler.step()
 
             if config.getboolean("MODEL_TUNING", "log_to_neptune"):
+                # TODO add average loss tracker
                 run["train/loss"].append(loss.item())
             report_gpu()
 
@@ -194,7 +196,9 @@ def train(config):
                 eval_loss = 0
 
                 with torch.no_grad():
-                    for eval_batch in eval_loader:
+                    eval_loop = tqdm(eval_loader, leave=True)
+                    # TODO add another tqdm for evaluation
+                    for eval_batch in eval_loop:
                         with torch.cuda.amp.autocast():
                             if config["MODEL_TUNING"]["loss"] == "mnr":
                                 pass
@@ -218,7 +222,8 @@ def train(config):
                         rounds_count = 0
                         try:
                             if batch_count > 0:
-                                model.save_pretrained(f"{config['MODEL_TUNING']['path_to_save_fine_tuned_model']}/model_{run.get_run_url().split('/')[-1][4:]}_{epoch}_{batch_count}", from_pt=True)
+                                # TODO: model won't be save if neptune is false
+                                model.save_pretrained(f"{config['MODEL_TUNING']['path_to_save_fine_tuned_model']}/model_{run.get_run_url().split('/')[-1][4:]}_{epoch}", from_pt=True)
                         except Exception as e:
                             print(f'model not saved epoch = {epoch}, batch = {batch_count}, error = {e}')
 

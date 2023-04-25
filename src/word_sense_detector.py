@@ -9,6 +9,9 @@ from scipy.spatial import distance
 from src.poolings import PoolingStrategy
 from src.utils_model import get_hidden_states
 
+from tqdm import tqdm
+tqdm.pandas()
+
 
 class WordSenseDetector:
 
@@ -230,5 +233,5 @@ class WordSenseDetector:
     def run(self):
         # TODO groupby data by lemma and create list of all contexts (this will help to remove data from init and move to run)
         # TODO rewrite apply to only 2 columns and use params (lemma-senses dict) .apply(lambda x: self.predict_word_sense(x, param), axis=1)
-        self.evaluation_dataset["predicted_context"] = self.evaluation_dataset.apply(self.predict_word_sense, axis=1)
+        self.evaluation_dataset["predicted_context"] = self.evaluation_dataset.progress_apply(self.predict_word_sense, axis=1)
         return self.evaluation_dataset

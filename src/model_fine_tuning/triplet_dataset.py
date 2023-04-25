@@ -2,8 +2,7 @@ import torch
 
 
 class TripletDataset(torch.utils.data.Dataset):
-
-    def __init__(self, anchor, positive, negative, tokenizer, seq_len=250):
+    def __init__(self, anchor, positive, negative, tokenizer, seq_len=128):
         self.anchor = anchor
         self.positive = positive
         self.negative = negative
@@ -20,27 +19,27 @@ class TripletDataset(torch.utils.data.Dataset):
 
         tokenized_anchor = self.tokenizer(
             anchor,
-            max_length = self.seq_len,
-            padding = "max_length",
-            truncation = True,
-            add_special_tokens = True,
-            return_attention_mask = True
+            max_length=self.seq_len,
+            padding="max_length",
+            truncation=True,
+            add_special_tokens=True,
+            return_attention_mask=True
         )
         tokenized_positive = self.tokenizer(
             positive,
-            max_length = self.seq_len,
-            padding = "max_length",
-            truncation = True,
-            add_special_tokens = True,
-            return_attention_mask = True
+            max_length=self.seq_len,
+            padding="max_length",
+            truncation=True,
+            add_special_tokens=True,
+            return_attention_mask=True
         )
         tokenized_negative = self.tokenizer(
             negative,
-            max_length = self.seq_len,
-            padding = "max_length",
-            truncation = True,
-            add_special_tokens = True,
-            return_attention_mask = True
+            max_length=self.seq_len,
+            padding="max_length",
+            truncation=True,
+            add_special_tokens=True,
+            return_attention_mask=True
         )
 
         return {"anchor_ids": torch.tensor(tokenized_anchor["input_ids"], dtype=torch.long),
