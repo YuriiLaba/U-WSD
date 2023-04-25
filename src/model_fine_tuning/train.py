@@ -137,9 +137,11 @@ def train(config):
 
     # TODO add paralele batch loader
     train_loader = torch.utils.data.DataLoader(train_dataset,
-                                               batch_size=config.getint('MODEL_TUNING', 'batch_size'), shuffle=True)
+                                               batch_size=config.getint('MODEL_TUNING', 'batch_size'), shuffle=True,
+                                               num_workers=4, pin_memory=True)
     eval_loader = torch.utils.data.DataLoader(eval_dataset,
-                                              batch_size=config.getint('MODEL_TUNING', 'batch_size'), shuffle=True)
+                                              batch_size=config.getint('MODEL_TUNING', 'batch_size'), shuffle=True,
+                                              num_workers=4, pin_memory=True)
 
     train_loss_stat = AverageMeter("train_loss")
     # eval_loss_stat = AverageMeter("eval_loss")
@@ -197,7 +199,7 @@ def train(config):
                     eval_loop = tqdm(eval_loader, leave=True)
                     # TODO add another tqdm for evaluation
                     for eval_batch in eval_loop:
-                        with torch.cuda.amp.autocast():
+                        with torch.cuda.amp.autocast():  # TODO: Do we need this?
                             if config["MODEL_TUNING"]["loss"] == "mnr":
                                 pass
                                 # eval_loss += calculate_mnr_loss(model, eval_batch).item()
