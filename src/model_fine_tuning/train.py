@@ -11,7 +11,6 @@ import random
 from transformers import AutoTokenizer, AutoModel
 from transformers.optimization import get_linear_schedule_with_warmup
 import torch.nn as nn
-from sklearn.metrics import accuracy_score
 
 import neptune.new as neptune
 from tqdm.auto import tqdm
@@ -22,6 +21,7 @@ from src.udpipe_model import UDPipeModel
 from src.word_sense_detector import WordSenseDetector
 from src.utils_results import prediction_accuracy
 from utlis import report_gpu
+from utlis import AverageMeter
 
 torch.manual_seed(47)
 random.seed(92)
@@ -141,6 +141,9 @@ def train(config):
     eval_loader = torch.utils.data.DataLoader(eval_dataset,
                                               batch_size=config.getint('MODEL_TUNING', 'batch_size'), shuffle=True)
 
+    train_loss_stat = AverageMeter("train_loss")
+    # eval_loss_stat = AverageMeter("eval_loss")
+
     optim = torch.optim.Adam(model.parameters(), lr=config.getfloat('MODEL_TUNING', 'learning_rate'))
 
     if config.getboolean('MODEL_TUNING', 'apply_warmup'):
@@ -172,6 +175,8 @@ def train(config):
             else:
                 raise Exception("Undefined loss!")
 
+            train_loss_stat.update(loss.item(), config.getint('MODEL_TUNING', 'batch_size'))  # TODO: .detach().cpu()?
+
             loss.backward()
             optim.step()
             optim.zero_grad()
@@ -180,8 +185,8 @@ def train(config):
                 scheduler.step()
 
             if config.getboolean("MODEL_TUNING", "log_to_neptune"):
-                # TODO add average loss tracker
-                run["train/loss"].append(loss.item())
+                acc_val, acc_avg = train_loss_stat()
+                run["train/loss"].append(acc_avg)
             report_gpu()
 
             if batch_count % 100 == 0:
