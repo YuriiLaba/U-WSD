@@ -134,8 +134,6 @@ def train(config):
                                    positive=eval_data["positive"].values,
                                    negative=eval_data["negative"].values,
                                    tokenizer=tokenizer)
-
-    # TODO add paralele batch loader
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=config.getint('MODEL_TUNING', 'batch_size'), shuffle=True,
                                                num_workers=4, pin_memory=True)
