@@ -7,7 +7,8 @@ from src.config import MINIMUM_POS_OCCURRENCE, MINIMUM_GLOSS_OCCURRENCE, FREQUEN
 
 def prediction_accuracy(data_with_predictions):
     data_dropna = data_with_predictions.dropna()
-
+    data_dropna['gloss'] = data_dropna['gloss'].apply(lambda x: x[0])
+    data_dropna['predicted_context'] = data_dropna['predicted_context'].apply(lambda x: x[0])
     return accuracy_score(data_dropna["gloss"], data_dropna["predicted_context"])
 
 

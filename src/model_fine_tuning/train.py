@@ -20,6 +20,7 @@ from reinit_model_weights import ModelWithRandomizingSomeWeights
 from triplet_dataset import TripletDataset
 from src.udpipe_model import UDPipeModel
 from src.word_sense_detector import WordSenseDetector
+from src.utils_results import prediction_accuracy
 from utlis import report_gpu
 
 torch.manual_seed(47)
@@ -81,14 +82,6 @@ def _calculate_triplet_loss(model, batch, triplet_loss):
     del anchor_ids, anchor_mask, pos_ids, pos_mask, neg_ids, neg_mask, batch
 
     return triplet_loss(a, p, n)
-
-
-# TODO: REMOVE THIS!!
-def prediction_accuracy(data_with_predictions):
-    data_dropna = data_with_predictions.dropna()
-    data_dropna['gloss'] = data_dropna['gloss'].apply(lambda x: x[0])
-    data_dropna['predicted_context'] = data_dropna['predicted_context'].apply(lambda x: x[0])
-    return accuracy_score(data_dropna["gloss"], data_dropna["predicted_context"])
 
 
 def _calculate_wsd_accuracy(model, udpipe_model, eval_data, tokenizer):
