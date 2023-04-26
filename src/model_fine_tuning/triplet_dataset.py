@@ -45,9 +45,9 @@ class TripletDataset(torch.utils.data.Dataset):
         return {"anchor_ids": torch.tensor(tokenized_anchor["input_ids"], dtype=torch.long),
                 "anchor_mask": torch.tensor(tokenized_anchor["attention_mask"], dtype=torch.long),
 
-                "positive_ids": torch.tensor(tokenized_positive["attention_mask"], dtype=torch.long),
+                "positive_ids": torch.tensor(tokenized_positive["input_ids"], dtype=torch.long),
                 "positive_mask": torch.tensor(tokenized_positive["attention_mask"], dtype=torch.long),
 
-                "negative_ids": torch.tensor(tokenized_negative["attention_mask"], dtype=torch.long),
+                "negative_ids": torch.tensor(tokenized_negative["input_ids"], dtype=torch.long),
                 "negative_mask": torch.tensor(tokenized_negative["attention_mask"], dtype=torch.long),
                 }

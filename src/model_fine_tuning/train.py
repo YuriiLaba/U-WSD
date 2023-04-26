@@ -23,6 +23,11 @@ from src.utils_results import prediction_accuracy
 from utlis import report_gpu
 from utlis import AverageMeter
 
+import warnings
+warnings.simplefilter('ignore')
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 torch.manual_seed(47)
 random.seed(92)
 np.random.seed(39)
@@ -195,7 +200,6 @@ def train(config):
 
                 with torch.no_grad():
                     eval_loop = tqdm(eval_loader, leave=True)
-                    # TODO add another tqdm for evaluation
                     for eval_batch in eval_loop:
                         with torch.cuda.amp.autocast():  # TODO: Do we need this?
                             if config["MODEL_TUNING"]["loss"] == "mnr":

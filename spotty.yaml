@@ -13,13 +13,7 @@ project:
 containers:
   - projectDir: /workspace/project
     file: docker/Dockerfile.spotty
-    ports:
-      # TensorBoard
-      - containerPort: 6006
-        hostPort: 6006
-      # Jupyter
-      - containerPort: 8888
-        hostPort: 8888
+    runtimeParameters: [ '--shm-size', '8G' ]
     volumeMounts:
       - name: workspace
         mountPath: /workspace
@@ -47,6 +41,8 @@ scripts:
   preprocess: |
     python preprocessing.py
   train: |
+    python run_fine_tuning.py
+  train-old: |
     python fine_tune_pytorch.py
   data-collection: |
     python collect_ubertext_sentences.py
