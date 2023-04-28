@@ -20,6 +20,8 @@ from triplet_dataset import TripletDataset
 from src.udpipe_model import UDPipeModel
 from src.word_sense_detector import WordSenseDetector
 from src.utils_results import prediction_accuracy
+from src.poolings import PoolingStrategy
+from src.prediction_strategies import PredictionStrategy
 from utlis import report_gpu
 from utlis import AverageMeter
 
@@ -94,7 +96,10 @@ def _calculate_wsd_accuracy(model, udpipe_model, eval_data, tokenizer):
         pretrained_model=model,
         udpipe_model=udpipe_model,
         evaluation_dataset=eval_data,
-        tokenizer=tokenizer)
+        tokenizer=tokenizer,
+        pooling_strategy=PoolingStrategy.mean_pooling,
+        prediction_strategy=PredictionStrategy.all_examples_to_one_embedding
+    )
 
     eval_data = word_sense_detector.run()
     return prediction_accuracy(eval_data)
