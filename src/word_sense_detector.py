@@ -6,8 +6,7 @@ from transformers import AutoTokenizer, AutoModel
 from collections import Counter
 from scipy.spatial import distance
 
-from src.poolings import PoolingStrategy
-from src.utils_model import get_hidden_states
+from src.utils_model import run_inference
 
 from tqdm import tqdm
 tqdm.pandas()
@@ -31,10 +30,6 @@ class WordSenseDetector:
         self.pooling_strategy = pooling_strategy
         # TODO create a WSD_logger and move there missing_target_word_in_sentence
         self.missing_target_word_in_sentence = 0
-        # TODO create a polling selection
-
-    def tokenize_text(self, input_text):
-        return self.tokenizer(input_text, return_tensors='pt').to(self.device)
 
     def find_target_word_in_sentence(self, input_text, target_word):
         """
@@ -95,16 +90,6 @@ class WordSenseDetector:
 
         return target_words_with_indexes
 
-    def get_model_output(self, tokenized_input_text):
-        with torch.no_grad():
-            model_output = self.model(**tokenized_input_text)
-        return model_output
-
-    def run_inference(self, text):
-        tokenized_text = self.tokenize_text(text)
-        model_output = self.get_model_output(tokenized_text)
-        return tokenized_text, get_hidden_states(model_output)
-
     def get_target_word_embedding(self, target_word, sentence_example):
         # TODO: remove it
         ACUTE = chr(0x301)
@@ -117,7 +102,7 @@ class WordSenseDetector:
             # print("Can't find target word in sentence")
             return None
 
-        tokenized_input_text, hidden_states = self.run_inference(sentence_example)
+        tokenized_input_text, hidden_states = run_inference(self.model, self.tokenizer, sentence_example, self.device)
         target_word_indexes = self.find_target_word_in_tokenized_text(tokenized_input_text, word)
 
         # TODO if len(target_word_indexes) != 1:
@@ -133,7 +118,7 @@ class WordSenseDetector:
         return self.pooling_strategy(hidden_states[target_word_indexes[0]:target_word_indexes[-1] + 1])
 
     def get_context_embedding(self, context):
-        _, hidden_states_context = self.run_inference(context)
+        _, hidden_states_context = run_inference(self.model, self.tokenizer, context, self.device)
         return self.pooling_strategy(hidden_states_context)
 
     def predict_word_sense(self, row):
@@ -194,8 +179,8 @@ class WordSenseDetector:
                 for sub_context in context:
                     sub_context_embedding = self.get_context_embedding(sub_context)
 
-                    for embeding in target_word_embeddings:
-                        sub_similarity = 1 - distance.cosine(embeding, sub_context_embedding)
+                    for embedding in target_word_embeddings:
+                        sub_similarity = 1 - distance.cosine(embedding, sub_context_embedding)
                         if sub_similarity > max_sub_sim:
                             max_sub_sim = sub_similarity
 
