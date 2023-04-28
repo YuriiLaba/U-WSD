@@ -213,20 +213,27 @@ class WordSenseDetector:
 
             max_sim = -1
             correct_context = None
+            target_word_embeddings = []
+
+            for example in examples:
+                target_word_embedding = self.get_target_word_embedding(lemma, example)
+                if target_word_embedding is not None:
+                    target_word_embeddings.append(target_word_embedding)
 
             for context in contexts:
-                context_embedding = self.get_context_embedding(context)
+                max_sub_sim = -1
 
-                for example in examples:
-                    target_word_embedding = self.get_target_word_embedding(lemma, example)
-                    if target_word_embedding is None:
-                        return None
+                for sub_context in context:
+                    sub_context_embedding = self.get_context_embedding(sub_context)
 
-                    similarity = 1 - distance.cosine(target_word_embedding, context_embedding)
+                    for embeding in target_word_embeddings:
+                        sub_similarity = 1 - distance.cosine(embeding, sub_context_embedding)
+                        if sub_similarity > max_sub_sim:
+                            max_sub_sim = sub_similarity
 
-                    if similarity > max_sim:
-                        max_sim = similarity
-                        correct_context = context
+                if max_sub_sim > max_sim:
+                    max_sim = max_sub_sim
+                    correct_context = context
 
             return correct_context
 
