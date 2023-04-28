@@ -15,8 +15,8 @@ tqdm.pandas()
 
 class WordSenseDetector:
 
-    def __init__(self, pretrained_model, udpipe_model, evaluation_dataset,
-                 prediction_strategy="all_examples_to_one_embedding", pooling_strategy="mean_pooling", **kwargs):
+    def __init__(self, pretrained_model, udpipe_model, evaluation_dataset, pooling_strategy,
+                 prediction_strategy="all_examples_to_one_embedding", **kwargs):
         # TODO create doc-string especially for describing prediction_strategy
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if isinstance(pretrained_model, str):
@@ -130,43 +130,11 @@ class WordSenseDetector:
             return None
 
         target_word_indexes = target_word_indexes[0][1]  # TODO: explain
-        if self.pooling_strategy == "mean_pooling":
-            return PoolingStrategy.mean_pooling(hidden_states[target_word_indexes[0]:target_word_indexes[-1] + 1])
-
-        elif self.pooling_strategy == "max_pooling":
-            return PoolingStrategy.max_pooling(hidden_states[target_word_indexes[0]:target_word_indexes[-1] + 1])
-
-        elif self.pooling_strategy == "mean_max_pooling":
-            return PoolingStrategy.mean_max_pooling(hidden_states[target_word_indexes[0]:target_word_indexes[-1] + 1])
-
-        elif self.pooling_strategy == "concatenate_pooling":
-            return PoolingStrategy.concatenate_pooling(hidden_states[target_word_indexes[0]:target_word_indexes[-1] + 1])
-
-        elif self.pooling_strategy == "last_four_sum_pooling":
-            return PoolingStrategy.last_four_sum_pooling(hidden_states[target_word_indexes[0]:target_word_indexes[-1] + 1])
-
-        elif self.pooling_strategy == "last_two_sum_pooling":
-            return PoolingStrategy.last_two_sum_pooling(hidden_states[target_word_indexes[0]:target_word_indexes[-1] + 1])
+        return self.pooling_strategy(hidden_states[target_word_indexes[0]:target_word_indexes[-1] + 1])
 
     def get_context_embedding(self, context):
         _, hidden_states_context = self.run_inference(context)
-        if self.pooling_strategy == "mean_pooling":
-            return PoolingStrategy.mean_pooling(hidden_states_context)
-
-        elif self.pooling_strategy == "max_pooling":
-            return PoolingStrategy.max_pooling(hidden_states_context)
-
-        elif self.pooling_strategy == "mean_max_pooling":
-            return PoolingStrategy.mean_max_pooling(hidden_states_context)
-
-        elif self.pooling_strategy == "concatenate_pooling":
-            return PoolingStrategy.concatenate_pooling(hidden_states_context)
-
-        elif self.pooling_strategy == "last_four_sum_pooling":
-            return PoolingStrategy.last_four_sum_pooling(hidden_states_context)
-
-        elif self.pooling_strategy == "last_two_sum_pooling":
-            return PoolingStrategy.last_two_sum_pooling(hidden_states_context)
+        return self.pooling_strategy(hidden_states_context)
 
     def predict_word_sense(self, row):
 
