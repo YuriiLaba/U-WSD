@@ -150,12 +150,13 @@ def prediction_comparison(base, new, udpipe_model):
     results_base = results_reports(base, udpipe_model, verbose=False, return_results=True)
     results_new = results_reports(new, udpipe_model, verbose=False, return_results=True)
 
-    results_base = pd.concat(results_base)[['accuracy', 'count']]
+    results_base = pd.concat(results_base)['accuracy']
     results_base = results_base[~results_base.index.duplicated(keep='first')].dropna()
 
-    results_new = pd.concat(results_new)[['accuracy', 'count']]
+    results_new = pd.concat(results_new)['accuracy']
     results_new = results_new[~results_new.index.duplicated(keep='first')].dropna()
 
     print(results_new - results_base)
 
     return correct_base_miss_new, correct_new_miss_base
+
