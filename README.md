@@ -1,45 +1,41 @@
-# word-sense-ambiguation
-
-[СЛОВНИК УКРАЇНСЬКОЇ МОВИ](https://services.ulif.org.ua/expl/Entry)
+# Contextual embeddings for Ukrainian: A large language model approach to word sense disambiguation
 
 
-### Data preparation
+[![Download model 🤗 ](https://img.shields.io/badge/Download%20Model-%F0%9F%A4%97%20Model-yellow)](https://huggingface.co/lang-uk/ukr-paraphrase-multilingual-mpnet-base)
 
-0. Prepare utilities files
-   - Parse ubertext wiki dataset
-   - Get freq_in_corpus for each pair lemma + pos
-1. Read and transform data
-   - Remove lemmas shorter than MIN_LEMMA_LENTH
-   - Remove lemmas where synset emtpy (БА́ЙДИКИ, ВСТУПИ́ТИ т.п.) or missing (АНТО́НІВ, БОРТНЯ́К т.п.)
-   - Check if we use Homonyms (homonym=True) or pay attention on Stress (homonym=False)
-     - If use homonyms than combine different lemmas that have same spelling.
-   - Remove lemmas with missing gloss (ГИ́ДКО, ЛЯ́ШКА т.п.)
-   - Remove lemmas with missing examples (ПЕРЕХОРУВА́ТИ, ОБЕЗКРО́ВИТИСЯ т.п.)
-   - Prepare gloss for lemmas, there are two different gloss_strategy:
-     - Take first gloss for each lemma
-     - Concat all gloss to one
-   - Remove lemmas with gloss that appears more than MAX_GLOSS_OCCURRENCE
-   - Remove from gloss (у 1 знач.)
-2. Take first n_senses glosses for each lemma
-3. Run model...
+This repository is an official implementation of paper
+[Contextual Embeddings for Ukrainian: A Large Language Model Approach to Word Sense Disambiguation](https://aclanthology.org/2023.unlp-1.2/) (Laba et al., UNLP 2023 at EACL).
 
-...
+## WSD task overview
+Word Sense Disambiguation (WSD) task involves identifying a polysemic word’s correct meaning in a given context.
+
+## Solution overview
+In our approach to the WSD task, we fine-tuned the [S-BERT model](https://huggingface.co/sentence-transformers/paraphrase-multilingual-mpnet-base-v2) for the Ukrainian language. The model was fine-tuned using the unsupervised triplet dataset built on [UberText2.0](https://lang.org.ua/en/ubertext/). We used TripletMarginLoss during fine-tuning to maximize the separation between correct and incorrect senses. 
+
+The model was validated on a homonyms dataset based on the [СЛОВНИК УКРАЇНСЬКОЇ МОВИ](https://sum20ua.com). To the best of our knowledge, this is the first dataset to validate the WSD task in Ukrainian.
+
+The model can be utilized to generate high-quality embeddings for the Ukrainian language. It is available on [Hugging Face]((https://huggingface.co/sentence-transformers/paraphrase-multilingual-mpnet-base-v2)).
 
 
+## Metrics
+| Model                          | Overall Acc. | Noun Acc. | Verb Acc. | Adj. Acc. | Adv. Acc. |
+|--------------------------------|--------------|-----------|-----------|-----------|-----------|
+| Babelfy Baseline               | 0.526        | -         | -         | -         | -         |
+| PMMBv2                         | 0.735        | 0.767     | 0.668     | 0.752     | 0.593     |
+| PMMBv2 Tuned on ∼190K Triplets | 0.770        | 0.819     | 0.685     | 0.743     | 0.562     |
+| PMMBv2 Tuned on ∼1.2M Triplets | 0.778        | 0.825     | 0.698     | 0.761     | 0.531     |
+| PMMBv2 Tuned on ∼1.2M Triplets with Filtering | 0.779        | 0.824     | 0.693     | 0.759     | 0.607     |
+## Datasets
+### WSD Dataset
+### Train Dataset
+## How to reproduce the results
+### Step 1: Preparation
+### Step 2: Train
+### Step 3: Evaluation
 
-### Validation method
-- Results by lemma POS
-  - Get POS of lemma. There are 2 different ways to do that:
-    - With pymorphy for lemma
-    - With Udpipe and Stanza base on example column
-  - Remove low occurrence POS (occurrence in data set less than MINIMUM_POS_OCCURRENCE)
-- Results by number of different gloss per lemma
-  - Get result by number of different gloss for lemma.
-  - Combine results for numbers of unique gloss per lemma less than MINIMUM_GLOSS_OCCURRENCE 
-- Results by frequency of lemma
-  - Merge dataframe with prepared frequency dataframe by lemma+pos if possible or with most frequent lemma+pos if missing
-  - Calculate FREQUENCY_QUANTILES quantiles for frequency 
-  - Iterative print results by removing lowest frequency quantiles
-- Results by first n gloss for each lemma
-  - Get results if we calculate accuracy only by first n gloss for lemmas
+## Citation
 
+
+TODO: publish paper on papers with code
+
+TODO: publish WSD eval dataset and link it
