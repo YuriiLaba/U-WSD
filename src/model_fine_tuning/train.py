@@ -40,7 +40,7 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 def _read_wsd_eval_dataset(config):
     wsd_eval_data = pd.read_csv(config["MODEL_TUNING"]["path_to_wsd_eval_dataset"])
     wsd_eval_data["examples"] = wsd_eval_data["examples"].apply(lambda x: literal_eval(x))
-    wsd_eval_data["gloss"] = wsd_eval_data["gloss"].apply(lambda x: literal_eval(x))
+    # wsd_eval_data["gloss"] = wsd_eval_data["gloss"].apply(lambda x: literal_eval(x)) # TODO: we had issue that the record wasn't list
     return wsd_eval_data
 
 

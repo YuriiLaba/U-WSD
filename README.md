@@ -75,8 +75,18 @@ python3 collect_triplets.py
 
 ## How to reproduce the results
 ### Step 1: Preparation
+1. run collect_ubertext_senteces.py - will generate lemma -> sentences that contain that lemma
+
+2. run collect_triplets.py - generate triplets
+
+3. process sum (main.py)
+
 ### Step 2: Train
+4. run run_fine_tuning.py
+
 ### Step 3: Evaluation
+# TODO: add prediction_diagram.png
+5. run word sence predictor (main.py)
 
 ## Citation
 
@@ -101,9 +111,11 @@ python3 collect_triplets.py
 ```
 
 
-
-TODO: publish paper on papers with code
-
-TODO: publish WSD eval dataset and link it
-
-TODO: add * to ConEFU ∼1.2M Triplets with Filtering 
+TODOs:
+1. Publish paper on papers with code
+2. Publish WSD eval dataset and link it
+3. Add * to ConEFU ∼1.2M Triplets with Filtering 
+4. Go through the code, do high priority refactoring (like in src folder), create main scripts (main train, prepare and eval. Maiby in separate module)
+5. Add brief documentation to each class/function
+6. Improve project structure (like badly_predicted.py)
+7. Implement parallel execution on 2 GPUs

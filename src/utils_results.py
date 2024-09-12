@@ -25,7 +25,7 @@ def generate_results_by_pos(data_with_predictions, udpipe_model):
 
     results = {'overall_accuracy': [prediction_accuracy(data_with_predictions), len(data_with_predictions)]}
 
-    for pos in data_with_predictions["pos"].value_counts().iteritems():
+    for pos in data_with_predictions["pos"].value_counts().items():
         if pos[1] < MINIMUM_POS_OCCURRENCE:
             break
         data_with_predictions_pos = data_with_predictions[data_with_predictions["pos"] == pos[0]]
@@ -46,7 +46,7 @@ def generate_results_by_count_of_gloss(data_with_predictions):
 
     results = {'overall_accuracy': [prediction_accuracy(data_with_predictions), len(data_with_predictions)]}
 
-    for gloss_count in data_with_predictions["gloss_count"].value_counts().sort_index().iteritems():
+    for gloss_count in data_with_predictions["gloss_count"].value_counts().sort_index().items():
         if gloss_count[1] < MINIMUM_GLOSS_OCCURRENCE:
             data_with_predictions_gloss = data_with_predictions[data_with_predictions["gloss_count"] >= gloss_count[0]]
             results[f'word_that_have_{gloss_count[0]}+_glosses'] = [prediction_accuracy(data_with_predictions_gloss),

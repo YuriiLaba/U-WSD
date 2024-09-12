@@ -104,9 +104,9 @@ class CollectUberTextSentences:
 
 
 if __name__ == "__main__":
-    # TODO: if I already have this file but in other place
-    if not os.path.exists("all_uniq_filtered_shuffled.txt.bz2"):
-        os.system("""wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=19ons1AWEwbrqY7zwLYhYKHGgK6ImHw9G' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=19ons1AWEwbrqY7zwLYhYKHGgK6ImHw9G" -O all_uniq_filtered_shuffled.txt.bz2 && rm -rf /tmp/cookies.txt""")
+    # TODO: if I already have this file but in other place (just faced such situation, nice TODO)
+    # if not os.path.exists("all_uniq_filtered_shuffled.txt.bz2"):
+    #     os.system("""wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=19ons1AWEwbrqY7zwLYhYKHGgK6ImHw9G' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=19ons1AWEwbrqY7zwLYhYKHGgK6ImHw9G" -O all_uniq_filtered_shuffled.txt.bz2 && rm -rf /tmp/cookies.txt""")
 
     collector = CollectUberTextSentences(PATH_TO_SOURCE_DATASET, PATH_TO_SAVE_GATHERED_DATASET,
                                          PATH_TO_LEMMAS_OF_INTEREST, NUMBER_OF_EXAMPLES_TO_GATHER)

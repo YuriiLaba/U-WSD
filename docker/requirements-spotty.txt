@@ -8,8 +8,8 @@ pymorphy2~=0.9.1
 pymorphy2-dicts-uk[fast]
 ufal.udpipe
 numpy~=1.21.4
-scikit-learn~=0.24.0
-scipy~=1.5.4
+scikit-learn~=1.5.2  #0.24.0
+scipy~=1.14.1 #1.5.4
 stanza == 1.4.2
 langdetect
 smart_open[all]
