@@ -66,11 +66,12 @@ data = read_and_transform_data('sum_14_final.jsonlines', homonym=True)
 | Аграрії прийшли до Азарова з вилами і <ins>**косами**</ins> Близько півтори тисячі аграріїв пікетували Кабінет міністрів.  | Половина війська була озброєна вилами, <ins>**косами**</ins> і сокирами.     | На <ins>**косі**</ins>, окрім краєвидів, моря й пляжів, можна також захоплююче порибалити.                                | 0.628      | 0.324     |
 | Саме в цій версії у Лари Крофт з'являється <ins>**коса**</ins>.                                                          | Але ось з'явилася дівчинка з <ins>**косою**</ins> на голові.                | Зовнішні Північно-Фризькі піщані <ins>**коси**</ins>  Япзанд  Нордероогзанд  Зюдероогзанд  Кніпзанд  Юнгнамензанд          | 0.773      | 0.385       |
 
-Training dataset is being generated in unsupervised way. To generate it on your own:
+Training dataset is being generated in unsupervised way. To generate it on your own run the following scripts:
 ```bash
 python3 collect_ubertext_sentences.py
 python3 collect_triplets.py
 ```
+The dataset used in our paper is available for access [here](https://drive.google.com/drive/folders/1uY3nOYba-1fVpe_7s_Vj8P9MNawukuw-?usp=sharing).
 
 
 ## How to reproduce the results
@@ -114,7 +115,7 @@ python3 collect_triplets.py
 TODOs:
 1. Publish paper on papers with code
 2. Publish WSD eval dataset and link it
-  - Fix train, eval and wsd_eval datasets on drive and share link on git
+  - Generate WSD Eval dataset
 3. Add * to ConEFU ∼1.2M Triplets with Filtering 
 4. Go through the code, do high priority refactoring (like in src folder), create main scripts (main train, prepare and eval. Maiby in separate module)
   - check fine_tune_pytorch and remove it

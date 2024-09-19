@@ -104,6 +104,12 @@ def _calculate_wsd_accuracy(model, udpipe_model, eval_data, tokenizer):
     eval_data = word_sense_detector.run()
     return prediction_accuracy(eval_data)
 
+def _save_model(model, path_to_save_model):
+    if isinstance(model, torch.nn.DataParallel):
+        model.module.save_pretrained(path_to_save_model, from_pt=True)
+    else:
+        model.save_pretrained(path_to_save_model, from_pt=True)
+
 
 def train(config):
 
@@ -232,7 +238,7 @@ def train(config):
                         try:
                             if batch_count > 0:
                                 # TODO: model won't be save if neptune is false
-                                model.save_pretrained(f"{config['MODEL_TUNING']['path_to_save_fine_tuned_model']}/model_{run.get_run_url().split('/')[-1][4:]}_{epoch}", from_pt=True)
+                                _save_model(model, f"{config['MODEL_TUNING']['path_to_save_fine_tuned_model']}/model_{run.get_run_url().split('/')[-1][4:]}_{epoch}")
                         except Exception as e:
                             print(f'model not saved epoch = {epoch}, batch = {batch_count}, error = {e}')
 
@@ -250,7 +256,7 @@ def train(config):
         # epoch ended
         try:
             # TODO: model won't be save if neptune is false
-            model.save_pretrained(f"{config['MODEL_TUNING']['path_to_save_fine_tuned_model']}/model_{run.get_run_url().split('/')[-1][4:]}_{epoch}", from_pt=True)
+            _save_model(model, f"{config['MODEL_TUNING']['path_to_save_fine_tuned_model']}/model_{run.get_run_url().split('/')[-1][4:]}_{epoch}")
         except Exception as e:
             print(f'model not saved epoch = {epoch}, batch = {batch_count}, error = {e}')
         batch_count = 0
