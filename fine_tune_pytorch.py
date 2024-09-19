@@ -10,6 +10,8 @@ import gc
 import torch.nn as nn
 
 from src.word_sense_detector import WordSenseDetector
+from src.poolings import PoolingStrategy
+from src.prediction_strategies import PredictionStrategy
 from src.udpipe_model import UDPipeModel
 from sklearn.metrics import accuracy_score
 
@@ -149,7 +151,10 @@ def calculate_wsd_accuracy(model, udpipe_model, eval_data, tokenizer):
         pretrained_model=model,
         udpipe_model=udpipe_model,
         evaluation_dataset=eval_data,
-        tokenizer=tokenizer)
+        tokenizer=tokenizer,
+        pooling_strategy=PoolingStrategy.mean_pooling,
+        prediction_strategy=PredictionStrategy.all_examples_to_one_embedding
+    )
 
     eval_data = word_sense_detector.run()
     return prediction_accuracy(eval_data)
@@ -285,7 +290,8 @@ def train(model, num_epochs, train_loader, eval_loader, udpipe_model, wsd_eval_d
                 model.eval()
                 eval_loss = 0
                 with torch.no_grad():
-                    for eval_batch in eval_loader:
+                    loop = tqdm(eval_loader, leave=True)
+                    for eval_batch in loop:
                         with torch.cuda.amp.autocast():
                             if loss_name == "mnr":
                                 eval_loss += calculate_mnr_loss(model, eval_batch).item()
@@ -335,7 +341,7 @@ if __name__ == "__main__":
         api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiJlYTg0NWQxYy0zNTVkLTQwZDktODJhZC00ZjgxNGNhODE2OTIifQ==",
     )
 
-    batch_size = 32
+    batch_size = 128
     scale = 20.0
     learning_rate = 2e-6
     num_epochs = 10
@@ -344,15 +350,15 @@ if __name__ == "__main__":
     loss_name = "triplet"
     NUM_ACCUMULATION_STEPS = 8
 
-    udpipe_model = UDPipeModel("20180506.uk.mova-institute.udpipe")
+    udpipe_model = UDPipeModel("datasets_pre_defined/20180506.uk.mova-institute.udpipe")
 
-    wsd_eval_data = pd.read_csv("wsd_loss_data_homonyms.csv")
+    wsd_eval_data = pd.read_csv("datasets/wsd_loss_data_homonyms.csv")
     wsd_eval_data["examples"] = wsd_eval_data["examples"].apply(lambda x: literal_eval(x))
     wsd_eval_data["gloss"] = wsd_eval_data["gloss"].apply(lambda x: literal_eval(x))
 
 
-    dataset = load_dataset('csv', data_files={'train': "wsd_lemma_homonyms_dataset_triplet_2m_filtered_30%_train_99.csv",
-                                              'eval': "wsd_lemma_homonyms_dataset_triplet_2m_filtered_30%_eval_1.csv"})
+    dataset = load_dataset('csv', data_files={'train': "datasets/wsd_lemma_homonyms_dataset_triplet_2m_filtered_30%_train_99.csv",
+                                              'eval': "datasets/wsd_lemma_homonyms_dataset_triplet_2m_filtered_30%_eval_1.csv"})
 
     tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')
 
@@ -362,11 +368,14 @@ if __name__ == "__main__":
 
     model = AutoModel.from_pretrained('sentence-transformers/paraphrase-multilingual-mpnet-base-v2',
                                       output_hidden_states=True).to(device)
+    
+    model = nn.DataParallel(model)
+    
 
     # model = ModelWithRandomizingSomeWeights(reinit_n_layers=reinit_n_layers).to(device)
 
-    train_loader = torch.utils.data.DataLoader(dataset["train"], batch_size=batch_size, shuffle=True)
-    eval_loader = torch.utils.data.DataLoader(dataset["eval"], batch_size=batch_size, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(dataset["train"], batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
+    eval_loader = torch.utils.data.DataLoader(dataset["eval"], batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
 
     # initialize Adam optimizer
     optim = torch.optim.Adam(model.parameters(), lr=learning_rate)

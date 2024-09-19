@@ -114,8 +114,11 @@ python3 collect_triplets.py
 TODOs:
 1. Publish paper on papers with code
 2. Publish WSD eval dataset and link it
+  - Fix train, eval and wsd_eval datasets on drive and share link on git
 3. Add * to ConEFU ∼1.2M Triplets with Filtering 
 4. Go through the code, do high priority refactoring (like in src folder), create main scripts (main train, prepare and eval. Maiby in separate module)
+  - check fine_tune_pytorch and remove it
 5. Add brief documentation to each class/function
 6. Improve project structure (like badly_predicted.py)
-7. Implement parallel execution on 2 GPUs
+7. Fix train seeds
+9. Generate new datasets (triplets and wsd_eval) and fine tune model

@@ -40,7 +40,7 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 def _read_wsd_eval_dataset(config):
     wsd_eval_data = pd.read_csv(config["MODEL_TUNING"]["path_to_wsd_eval_dataset"])
     wsd_eval_data["examples"] = wsd_eval_data["examples"].apply(lambda x: literal_eval(x))
-    # wsd_eval_data["gloss"] = wsd_eval_data["gloss"].apply(lambda x: literal_eval(x)) # TODO: we had issue that the record wasn't list
+    wsd_eval_data["gloss"] = wsd_eval_data["gloss"].apply(lambda x: literal_eval(x))
     return wsd_eval_data
 
 
@@ -128,6 +128,8 @@ def train(config):
     wsd_eval_data = _read_wsd_eval_dataset(config)
     train_data, eval_data = _load_dataset(config)
     model, tokenizer = _load_model_and_tokenizer(config)
+
+    model = nn.DataParallel(model)
 
     if config.getboolean('MODEL_TUNING', 'random_model_weights_reinitialization'):
         model = ModelWithRandomizingSomeWeights(model=model,
