@@ -20,13 +20,17 @@ The model was validated on a WSD dataset based on the [СЛОВНИК УКРАЇ
 
 
 ## Metrics
+## Metrics
 | Model                          | Overall Acc. | Noun Acc. | Verb Acc. | Adj. Acc. | Adv. Acc. |
 |--------------------------------|--------------|-----------|-----------|-----------|-----------|
 | Babelfy Baseline               | 0.526        | -         | -         | -         | -         |
 | PMMBv2                         | 0.735        | 0.767     | 0.668     | 0.752     | 0.593     |
-| ConEFU ∼190K Triplets | 0.770        | 0.819     | 0.685     | 0.743     | 0.562     |
-| ConEFU ∼1.2M Triplets | 0.778        | **0.825**     | **0.698**     | **0.761**     | 0.531     |
-| ConEFU ∼1.2M Triplets with Filtering | **0.779**        | 0.824     | 0.693     | 0.759     | **0.607**     |
+| ConEFU ∼190K Triplets          | 0.770        | 0.819     | 0.685     | 0.743     | 0.562     |
+| ConEFU ∼1.2M Triplets          | 0.778        | **0.825** | **0.698** | **0.761** | 0.531     |
+| ConEFU ∼1.2M Triplets Filtered* | **0.779** | 0.824     | 0.693     | 0.759     | **0.607** |
+
+(**\***) Filtering refers to removing triplets where the difference between the cosine similarity of the anchor and positive examples, and the anchor and negative examples, is less than 0.3.
+
 ## Datasets
 
 ### The WSD evaluation dataset
@@ -86,7 +90,9 @@ The dataset used in our paper is available for access [here](https://drive.googl
 4. run run_fine_tuning.py
 
 ### Step 3: Evaluation
-# TODO: add prediction_diagram.png
+![Evaluation strategy visualization](images/prediction_diagram.png)
+*Figure 1: Evaluation strategy visualization.*
+
 5. run word sence predictor (main.py)
 
 ## Citation
@@ -116,10 +122,9 @@ TODOs:
 1. Publish paper on papers with code
 2. Publish WSD eval dataset and link it
   - Generate WSD Eval dataset
-3. Add * to ConEFU ∼1.2M Triplets with Filtering 
-4. Go through the code, do high priority refactoring (like in src folder), create main scripts (main train, prepare and eval. Maiby in separate module)
+3. Go through the code, do high priority refactoring (like in src folder), create main scripts (main train, prepare and eval. Maiby in separate module)
   - check fine_tune_pytorch and remove it
-5. Add brief documentation to each class/function
-6. Improve project structure (like badly_predicted.py)
-7. Fix train seeds
-9. Generate new datasets (triplets and wsd_eval) and fine tune model
+4. Add brief documentation to each class/function
+5. Improve project structure (like badly_predicted.py)
+6. Fix train seeds
+7. Generate new datasets (triplets and wsd_eval) and fine tune model
