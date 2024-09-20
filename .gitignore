@@ -6,7 +6,7 @@ dev_env/*
 data/*
 fine-tuned-models/*
 
-src/model_fine_tuning/__pycache__/*
+services/trainer/__pycache__/*
 */__pycache__
 .DS_Store
 

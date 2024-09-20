@@ -1,5 +1,5 @@
 import numpy as np
-from src.utils_embedding_calculation import get_target_word_embedding, get_context_embedding
+from services.utils_embedding_calculation import get_target_word_embedding, get_context_embedding
 from scipy.spatial import distance
 
 

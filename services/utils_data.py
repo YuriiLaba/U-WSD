@@ -4,7 +4,7 @@ import pymorphy2
 import os
 import re
 import stanza
-from src.config import MIN_LEMMA_LENTH, MAX_GLOSS_OCCURRENCE, ACUTE, GRAVE, LEMMAS_TO_REMOVE
+from services.config import MIN_LEMMA_LENTH, MAX_GLOSS_OCCURRENCE, ACUTE, GRAVE, LEMMAS_TO_REMOVE
 from functools import reduce
 import operator
 

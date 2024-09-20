@@ -1,4 +1,4 @@
-from src.utils_model import run_inference
+from services.utils_model import run_inference
 from collections import Counter
 
 

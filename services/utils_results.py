@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 from sklearn.metrics import accuracy_score
-from src.utils_data import take_first_n_glosses, add_pos_tag, add_frequency_column
-from src.config import MINIMUM_POS_OCCURRENCE, MINIMUM_GLOSS_OCCURRENCE, FREQUENCY_QUANTILES
+from services.utils_data import take_first_n_glosses, add_pos_tag, add_frequency_column
+from services.config import MINIMUM_POS_OCCURRENCE, MINIMUM_GLOSS_OCCURRENCE, FREQUENCY_QUANTILES
 
 
 def prediction_accuracy(data_with_predictions):
