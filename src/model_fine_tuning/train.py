@@ -238,7 +238,7 @@ def train(config):
                         try:
                             if batch_count > 0:
                                 # TODO: model won't be save if neptune is false
-                                _save_model(model, f"{config['MODEL_TUNING']['path_to_save_fine_tuned_model']}/model_{run.get_run_url().split('/')[-1][4:]}_{epoch}")
+                                _save_model(model, f"{config['MODEL_TUNING']['path_to_save_fine_tuned_model']}/model_{run['sys/id'].fetch().split('/')[-1][4:]}_{epoch}")
                         except Exception as e:
                             print(f'model not saved epoch = {epoch}, batch = {batch_count}, error = {e}')
 
@@ -256,7 +256,7 @@ def train(config):
         # epoch ended
         try:
             # TODO: model won't be save if neptune is false
-            _save_model(model, f"{config['MODEL_TUNING']['path_to_save_fine_tuned_model']}/model_{run.get_run_url().split('/')[-1][4:]}_{epoch}")
+            _save_model(model, f"{config['MODEL_TUNING']['path_to_save_fine_tuned_model']}/model_{run['sys/id'].fetch().split('/')[-1][4:]}_{epoch}")
         except Exception as e:
             print(f'model not saved epoch = {epoch}, batch = {batch_count}, error = {e}')
         batch_count = 0

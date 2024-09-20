@@ -4,6 +4,7 @@ datasets_pre_defined
 datasets
 dev_env/*
 data/*
+fine-tuned-models/*
 
 src/model_fine_tuning/__pycache__/*
 */__pycache__
