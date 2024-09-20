@@ -5,7 +5,7 @@ import torch
 from sentence_transformers import SentenceTransformer, util
 
 # TODO: rename this variable
-from src.config import PATH_TO_SAVE_GATHERED_DATASET, EMBEDDER_MODEL, TRIPLET_PROCESSOR_BATCH_SIZE, \
+from services.config import PATH_TO_SAVE_GATHERED_DATASET, EMBEDDER_MODEL, TRIPLET_PROCESSOR_BATCH_SIZE, \
     PATH_TO_SAVE_TRIPLETS
 
 with open(PATH_TO_SAVE_GATHERED_DATASET, 'r') as f:

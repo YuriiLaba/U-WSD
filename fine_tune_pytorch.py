@@ -9,10 +9,10 @@ import os
 import gc
 import torch.nn as nn
 
-from src.word_sense_detector import WordSenseDetector
-from src.poolings import PoolingStrategy
-from src.prediction_strategies import PredictionStrategy
-from src.udpipe_model import UDPipeModel
+from services.word_sense_detector import WordSenseDetector
+from services.poolings import PoolingStrategy
+from services.prediction_strategies import PredictionStrategy
+from services.udpipe_model import UDPipeModel
 from sklearn.metrics import accuracy_score
 
 import torch

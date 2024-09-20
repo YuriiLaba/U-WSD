@@ -3,7 +3,7 @@ from tqdm import tqdm
 
 from transformers import AutoTokenizer, AutoModel
 
-tqdm.pandas()
+tqdm.pandas(desc="WSD Eval")
 
 
 class WordSenseDetector:

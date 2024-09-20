@@ -5,8 +5,8 @@ import tqdm
 import smart_open
 import json
 from langdetect import detect
-from src.udpipe_model import UDPipeModel
-from src.config import PATH_TO_SOURCE_DATASET, PATH_TO_SOURCE_UDPIPE, PATH_TO_SAVE_GATHERED_DATASET, \
+from services.udpipe_model import UDPipeModel
+from services.config import PATH_TO_SOURCE_DATASET, PATH_TO_SOURCE_UDPIPE, PATH_TO_SAVE_GATHERED_DATASET, \
     PATH_TO_LEMMAS_OF_INTEREST, NUMBER_OF_EXAMPLES_TO_GATHER
 
 udpipe_model = UDPipeModel(PATH_TO_SOURCE_UDPIPE)

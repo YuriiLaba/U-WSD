@@ -1,9 +1,10 @@
 import configparser
-from src.model_fine_tuning.train import train
+from services.trainer.trainer import Trainer
 
 config = configparser.ConfigParser()
-config.read("src/model_fine_tuning/fine_tuning_config.ini")
+config.read("services/trainer/fine_tuning_config.ini")
 
 
 if __name__ == "__main__":
-    train(config)
+    model_trainer = Trainer(config)
+    model_trainer.train()
