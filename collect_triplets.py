@@ -55,7 +55,7 @@ for lemma in tqdm.tqdm(lemma_examples_dataset.keys()):
             "positive_score": positive_scores.cpu(),
             "negative_score": negative_scores.cpu()
         })
-        triplets = triplets.append(lemma_df)
+        triplets = pd.concat([triplets, lemma_df], ignore_index=True)
 
         start += TRIPLET_PROCESSOR_BATCH_SIZE
         end += TRIPLET_PROCESSOR_BATCH_SIZE

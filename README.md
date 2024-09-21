@@ -128,3 +128,4 @@ TODOs:
 5. Improve project structure (like badly_predicted.py)
 6. Fix train seeds
 7. Generate new datasets (triplets and wsd_eval) and fine tune model
+8. Check number of sentences collected per lemma
