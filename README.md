@@ -129,3 +129,4 @@ TODOs:
 6. Fix train seeds
 7. Generate new datasets (triplets and wsd_eval) and fine tune model
 8. Check number of sentences collected per lemma
+9. Reach for collaboration with https://sapienzanlp.github.io/xl-wsd/
