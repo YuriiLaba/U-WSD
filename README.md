@@ -47,7 +47,7 @@ The model was validated on a WSD dataset based on the [СЛОВНИК УКРАЇ
 | коса  | ['Селезінка'] | ['Коса свиняча, що коло печінки, довгенька'] |
 | коса  | ['Південноафриканський етнос, що належить до групи народів банту'] | ['За генеалогічними переказами, коса є нащадками легендарного вождя Коса, від імені якого й походить назва етносу', 'У 1886 році британський дослідник Георг Тіль видав збірку казок і байок коса'] |
 
-You can access the WSD evaluation dataset [here](placeholder) or generate it on your own using U-WSD framework:
+You can access the WSD evaluation dataset [here](https://drive.google.com/file/d/1anP4l1x356YKpov1ZAdDx-WKFxS6i1Zn/view?usp=drive_link) or generate it on your own using the U-WSD framework:
 
 ```python
 from src.utils_data import read_and_transform_data
